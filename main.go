@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
@@ -21,6 +22,7 @@ const (
 
 var (
 	showVersion bool
+	table       Table
 )
 
 type (
@@ -64,31 +66,26 @@ type (
 		// 		OrderNum string
 		// 		ProductNum
 
+		Id   int
 		Pid  sql.NullString
 		Name sql.NullString
 		Type sql.NullString
 	}
 	Row struct {
+		Id   int
 		Pid  string
 		Name string
 		Type string
 	}
 )
 
-func search(keywd string) (table Table) {
+func init() {
 	var (
 		db, err = sql.Open("sqlite3", FILENAME)
-		sqlQ    = fmt.Sprintf(`SELECT %s, %s, %s
+		sqlQ    = fmt.Sprintf(`SELECT ROWID, %s, %s, %s
 						FROM "order2"
 						`, "品番", "品名", "形式寸法")
 	)
-	if keywd != "" {
-		sqlQ += fmt.Sprintf(`WHERE ("品番" LIKE "%%%s%%")
-				LIMIT 30
-				`, keywd)
-	} else {
-		sqlQ += `LIMIT 30`
-	}
 	rows, err := db.Query(sqlQ)
 	if err != nil {
 		log.Fatal(err)
@@ -96,11 +93,9 @@ func search(keywd string) (table Table) {
 	defer rows.Close()
 
 	// Null処理
-	// nullVal := new(sql.NullString)
 	for rows.Next() {
-		// var pid, name string
 		r := new(NullableRow)
-		if err := rows.Scan(&r.Pid, &r.Name, &r.Type); err != nil {
+		if err := rows.Scan(&r.Id, &r.Pid, &r.Name, &r.Type); err != nil {
 			log.Fatal(err)
 		}
 
@@ -110,7 +105,6 @@ func search(keywd string) (table Table) {
 			Type: r.Type.String,
 		}
 
-		fmt.Println(rv)
 		table = append(table, rv)
 	}
 	err = rows.Err()
@@ -118,6 +112,17 @@ func search(keywd string) (table Table) {
 		log.Fatal(err)
 	}
 	return
+}
+
+func search(kwd string) Table {
+	result := Table{}
+	for _, r := range table {
+		if strings.Contains(r.Pid, kwd) {
+			result = append(result, r)
+			fmt.Println(r)
+		}
+	}
+	return result
 }
 
 func main() {
@@ -137,12 +142,11 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
 			"msg":   "トップから30件を表示",
-			"table": search(""),
+			"table": table,
 		})
 	})
 	r.GET("/:pid", func(c *gin.Context) {
 		pid := c.Param("pid")
-		table := search(pid)
 		if len(table) == 0 {
 			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
 				"msg": "検索結果がありません",
@@ -151,7 +155,7 @@ func main() {
 		}
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
 			"msg":   fmt.Sprintf("品番 %s を検索, 30件を表示", pid),
-			"table": table,
+			"table": search(pid),
 		})
 	})
 
