@@ -1,4 +1,4 @@
-module sqlget
+module pnsearch
 
 go 1.18
 
