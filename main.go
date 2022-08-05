@@ -14,7 +14,9 @@ import (
 
 const (
 	// VERSION : schd version
-	VERSION = "v0.1.0"
+	VERSION  = "v0.1.0"
+	FILENAME = "./test/test50row.db"
+	//  "../../data/sqlite3.db"
 )
 
 var (
@@ -75,7 +77,7 @@ type (
 
 func search(keywd string) (table Table) {
 	var (
-		db, err = sql.Open("sqlite3", "../../data/sqlite3.db")
+		db, err = sql.Open("sqlite3", FILENAME)
 		sqlQ    = fmt.Sprintf(`SELECT %s, %s, %s
 						FROM "order2"
 						`, "品番", "品名", "形式寸法")
