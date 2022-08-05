@@ -66,23 +66,26 @@ type (
 		// 		OrderNum string
 		// 		ProductNum
 
-		Id   int
 		Pid  sql.NullString
 		Name sql.NullString
 		Type sql.NullString
 	}
 	Row struct {
-		Id   int
 		Pid  string
 		Name string
 		Type string
+	}
+	Query struct {
+		Pid  string `form:"品番"`
+		Name string `form:"品名"`
+		Type string `form:"形式寸法"`
 	}
 )
 
 func init() {
 	var (
 		db, err = sql.Open("sqlite3", FILENAME)
-		sqlQ    = fmt.Sprintf(`SELECT ROWID, %s, %s, %s
+		sqlQ    = fmt.Sprintf(`SELECT %s, %s, %s
 						FROM "order2"
 						`, "品番", "品名", "形式寸法")
 	)
@@ -95,7 +98,7 @@ func init() {
 	// Null処理
 	for rows.Next() {
 		r := new(NullableRow)
-		if err := rows.Scan(&r.Id, &r.Pid, &r.Name, &r.Type); err != nil {
+		if err := rows.Scan(&r.Pid, &r.Name, &r.Type); err != nil {
 			log.Fatal(err)
 		}
 
@@ -114,15 +117,17 @@ func init() {
 	return
 }
 
-func search(kwd string) Table {
-	result := Table{}
+func (q *Query) search() (result Table) {
 	for _, r := range table {
-		if strings.Contains(r.Pid, kwd) {
+		bol := strings.Contains(r.Pid, q.Pid) &&
+			strings.Contains(r.Name, q.Name) &&
+			strings.Contains(r.Type, q.Type)
+		if bol {
 			result = append(result, r)
 			fmt.Println(r)
 		}
 	}
-	return result
+	return
 }
 
 func main() {
@@ -141,12 +146,19 @@ func main() {
 	// API
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
-			"msg":   "トップから30件を表示",
-			"table": table,
+			"msg":   "トップから10件を表示",
+			"table": table[:10],
 		})
 	})
-	r.GET("/:pid", func(c *gin.Context) {
-		pid := c.Param("pid")
+	r.GET("/search", func(c *gin.Context) {
+		q := new(Query)
+		if err := c.ShouldBind(q); err != nil {
+			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
+				"msg": "Bad Query",
+			})
+			return
+		}
+		fmt.Printf("%+v\n", q)
 		if len(table) == 0 {
 			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
 				"msg": "検索結果がありません",
@@ -154,8 +166,8 @@ func main() {
 			return
 		}
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
-			"msg":   fmt.Sprintf("品番 %s を検索, 30件を表示", pid),
-			"table": search(pid),
+			"msg":   fmt.Sprintf("%#v を検索, 30件を表示", q),
+			"table": q.search(),
 		})
 	})
 
