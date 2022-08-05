@@ -64,28 +64,29 @@ type (
 
 		Pid  sql.NullString
 		Name sql.NullString
+		Type sql.NullString
 	}
 	Row struct {
 		Pid  string
 		Name string
+		Type string
 	}
 )
 
-func main() {
-	flag.BoolVar(&showVersion, "v", false, "Show version")
-	flag.Parse()
-	if showVersion {
-		fmt.Println("schd version", VERSION)
-		os.Exit(0) // Exit with version info
+func search(keywd string) (table Table) {
+	var (
+		db, err = sql.Open("sqlite3", "../../data/sqlite3.db")
+		sqlQ    = fmt.Sprintf(`SELECT %s, %s, %s
+						FROM "order2"
+						`, "品番", "品名", "形式寸法")
+	)
+	if keywd != "" {
+		sqlQ += fmt.Sprintf(`WHERE ("品番" LIKE "%%%s%%")
+				LIMIT 30
+				`, keywd)
+	} else {
+		sqlQ += `LIMIT 30`
 	}
-
-	// DB
-	db, err := sql.Open("sqlite3", "../../data/sqlite3.db")
-	sqlQ := fmt.Sprintf(`SELECT %s, %s
-							FROM "order"
-							WHERE ("品番" LIKE "%s")
-							LIMIT 10
-							`, "品番", "品名", "%AA%")
 	rows, err := db.Query(sqlQ)
 	if err != nil {
 		log.Fatal(err)
@@ -94,17 +95,17 @@ func main() {
 
 	// Null処理
 	// nullVal := new(sql.NullString)
-	table := Table{}
 	for rows.Next() {
 		// var pid, name string
 		r := new(NullableRow)
-		if err := rows.Scan(&r.Pid, &r.Name); err != nil {
+		if err := rows.Scan(&r.Pid, &r.Name, &r.Type); err != nil {
 			log.Fatal(err)
 		}
 
 		rv := Row{
 			Pid:  r.Pid.String,
 			Name: r.Name.String,
+			Type: r.Type.String,
 		}
 
 		fmt.Println(rv)
@@ -114,7 +115,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(table)
+	return
+}
+
+func main() {
+	flag.BoolVar(&showVersion, "v", false, "Show version")
+	flag.Parse()
+	if showVersion {
+		fmt.Println("schd version", VERSION)
+		os.Exit(0) // Exit with version info
+	}
 
 	// Router
 	r := gin.Default()
@@ -124,7 +134,21 @@ func main() {
 	// API
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
-			"msg":   "this is test",
+			"msg":   "トップから30件を表示",
+			"table": search(""),
+		})
+	})
+	r.GET("/:pid", func(c *gin.Context) {
+		pid := c.Param("pid")
+		table := search(pid)
+		if len(table) == 0 {
+			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
+				"msg": "検索結果がありません",
+			})
+			return
+		}
+		c.HTML(http.StatusOK, "table.tmpl", gin.H{
+			"msg":   fmt.Sprintf("品番 %s を検索, 30件を表示", pid),
 			"table": table,
 		})
 	})
