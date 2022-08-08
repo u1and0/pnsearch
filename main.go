@@ -19,7 +19,7 @@ const (
 	// VERSION : schd version
 	VERSION  = "v0.1.0"
 	FILENAME = "./test/test50row.db"
-	//  "../../data/sqlite3.db"
+	//  "/mnt/data/sqlite3.db"
 )
 
 var (
@@ -83,6 +83,7 @@ type (
 	}
 )
 
+// Show version
 func init() {
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.Parse()
@@ -90,7 +91,10 @@ func init() {
 		fmt.Println("schd version", VERSION)
 		os.Exit(0) // Exit with version info
 	}
+}
 
+// DB in memory
+func init() {
 	db, err := sql.Open("sqlite3", FILENAME)
 	if err != nil {
 		log.Fatal(err)
@@ -119,8 +123,10 @@ func main() {
 		pid := toSlice(view[0])
 		name := toSlice(view[1])
 		typed := toSlice(view[2])
-		// len(pid)仮
-		for i := 0; i < 10; i++ {
+		for i := 0; i < len(name); i++ {
+			if i > 1000 { // 最大1000件表示
+				break
+			}
 			r := Row{
 				Pid:  pid[i],
 				Name: name[i],
