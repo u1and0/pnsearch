@@ -18,10 +18,24 @@ import (
 )
 
 const (
-	// VERSION : schd version
-	VERSION  = "v0.1.0"
-	FILENAME = "./test/test50row.db"
-	//  "/mnt/data/sqlite3.db"
+	// VERSION : version info
+	VERSION = "v0.1.0"
+	// FILENAME = "./test/test50row.db"
+	FILENAME = "/mnt/2_Common/06_ツール/software/python/jupyter/PNsearch/data/sqlite3.db"
+	// SQLQ : 実行するSQL文
+	SQLQ = `SELECT
+			製番,
+			ユニットNo,
+			品番,
+			品名,
+			形式寸法,
+			単位,
+			メーカ,
+			必要数,
+			部品発注数
+			FROM order2
+			WHERE rowid > 800000
+			`
 )
 
 var (
@@ -74,14 +88,16 @@ type (
 	// Type sql.NullString
 	// }
 	Row struct {
-		Pid  string
-		Name string
-		Type string
+		UnitNo string
+		Pid    string
+		Name   string
+		Type   string
 	}
 	Query struct {
-		Pid  string `form:"品番"`
-		Name string `form:"品名"`
-		Type string `form:"形式寸法"`
+		UnitNo string `form:"要求番号"`
+		Pid    string `form:"品番"`
+		Name   string `form:"品名"`
+		Type   string `form:"形式寸法"`
 	}
 )
 
@@ -90,7 +106,7 @@ func init() {
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.Parse()
 	if showVersion {
-		fmt.Println("schd version", VERSION)
+		fmt.Println("pnsearch version", VERSION)
 		os.Exit(0) // Exit with version info
 	}
 }
@@ -105,7 +121,8 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	qf = qframe.ReadSQL(tx, qsql.Query("select * from order2"), qsql.SQLite())
+	qf = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
+	fmt.Println("qframe:", qf)
 }
 
 func main() {
@@ -132,7 +149,7 @@ func main() {
 			})
 			return
 		}
-		fmt.Printf("query: %+v\n", q)
+		fmt.Printf("query: %#v\n", q)
 
 		// Search word
 		filtered := q.search()
@@ -144,7 +161,7 @@ func main() {
 			return
 		}
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
-			"msg":   fmt.Sprintf("%#v を検索, 30件を表示", q),
+			"msg":   fmt.Sprintf("%#v を検索, %d件を表示", q, len(table)),
 			"table": table,
 		})
 	})
@@ -152,18 +169,57 @@ func main() {
 	r.Run()
 }
 
+// filterConstructor : 正規表現で検索するfilterを生成
+// func filterConstructor(q, col string) qframe.Filter {
+// 	re := regexp.MustCompile(ToRegex(q))
+// 	return qframe.Filter{
+// 		Comparator: func(p *string) bool { return re.MatchString(toString(p)) },
+// 		Column:     col,
+// 	}
+// }
+
 func (q *Query) search() qframe.QFrame {
-	re := regexp.MustCompile(ToRegex(q.Name)) //`.*A.*00.*`)
-	filter := qframe.Filter{
-		Comparator: func(p *string) bool { return re.MatchString(toString(p)) },
-		Column:     "品名",
+	res := []*regexp.Regexp{
+		regexp.MustCompile(ToRegex(q.UnitNo)),
+		regexp.MustCompile(ToRegex(q.Pid)),
+		regexp.MustCompile(ToRegex(q.Name)),
+		regexp.MustCompile(ToRegex(q.Type)),
 	}
-	re2 := regexp.MustCompile(ToRegex(q.Pid)) //`.*GAA.*`)
-	filter2 := qframe.Filter{
-		Comparator: func(p *string) bool { return re2.MatchString(toString(p)) },
-		Column:     "品番",
+
+	filters := []qframe.FilterClause{
+		qframe.Filter{
+			Comparator: func(p *string) bool { return res[0].MatchString(toString(p)) },
+			Column:     "ユニットNo",
+		},
+		qframe.Filter{
+			Comparator: func(p *string) bool { return res[1].MatchString(toString(p)) },
+			Column:     "品番",
+		},
+		qframe.Filter{
+			Comparator: func(p *string) bool { return res[2].MatchString(toString(p)) },
+			Column:     "品名",
+		},
+		qframe.Filter{
+			Comparator: func(p *string) bool { return res[3].MatchString(toString(p)) },
+			Column:     "形式寸法",
+		},
+		// filterConstructor(q.Pid, "品番"),
+		// filterConstructor(q.Name, "品名"),
+		// filterConstructor(q.Type, "形式寸法"),
 	}
-	return qf.Filter(qframe.And(filter, filter2))
+
+	// re := regexp.MustCompile(ToRegex(q.Name)) //`.*A.*00.*`)
+	// filter := qframe.Filter{
+	// 	Comparator: func(p *string) bool { return re.MatchString(toString(p)) },
+	// 	Column:     "品名",
+	// }
+	// re2 := regexp.MustCompile(ToRegex(q.Pid)) //`.*GAA.*`)
+	// filter2 := qframe.Filter{
+	// 	Comparator: func(p *string) bool { return re2.MatchString(toString(p)) },
+	// 	Column:     "品番",
+	// }
+	fmt.Println(filters)
+	return qf.Filter(qframe.And(filters...))
 }
 
 func toString(ptr *string) string {
@@ -182,7 +238,6 @@ func toSlice(view qframe.StringView) (stringSlice []string) {
 
 // ToRegex : スペース区切りを正規表現.*で埋める
 func ToRegex(s string) string {
-	fmt.Printf("raw query: %s\n", s)
 	r := strings.Join(strings.Split(s, " "), `.*`)
 	return fmt.Sprintf(`.*%s.*`, r)
 }
@@ -190,22 +245,27 @@ func ToRegex(s string) string {
 // Frame2Table : QFrame をTableへ変換
 func Frame2Table(qf qframe.QFrame) (table Table) {
 	view := []qframe.StringView{
+		qf.MustStringView("ユニットNo"),
 		qf.MustStringView("品番"),
 		qf.MustStringView("品名"),
 		qf.MustStringView("形式寸法"),
 	}
-	pid := toSlice(view[0])
-	name := toSlice(view[1])
-	typed := toSlice(view[2])
+	slices := [][]string{
+		toSlice(view[0]),
+		toSlice(view[1]),
+		toSlice(view[2]),
+		toSlice(view[3]),
+	}
 	// NameとTypeは常に表示する仕様
-	for i := 0; i < len(name); i++ {
-		if i > 1000 { // 最大1000件表示
+	for i := 0; i < len(slices[2]); i++ {
+		if i >= 1000 { // 最大1000件表示
 			break
 		}
 		r := Row{
-			Pid:  pid[i],
-			Name: name[i],
-			Type: typed[i],
+			UnitNo: slices[0][i],
+			Pid:    slices[1][i],
+			Name:   slices[2][i],
+			Type:   slices[3][i],
 		}
 		table = append(table, r)
 	}
