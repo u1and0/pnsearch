@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
@@ -114,26 +116,7 @@ func main() {
 
 	// API
 	r.GET("/", func(c *gin.Context) {
-		view := []qframe.StringView{
-			qf.MustStringView("品番"),
-			qf.MustStringView("品名"),
-			qf.MustStringView("形式寸法"),
-		}
-		table := Table{}
-		pid := toSlice(view[0])
-		name := toSlice(view[1])
-		typed := toSlice(view[2])
-		for i := 0; i < len(name); i++ {
-			if i > 1000 { // 最大1000件表示
-				break
-			}
-			r := Row{
-				Pid:  pid[i],
-				Name: name[i],
-				Type: typed[i],
-			}
-			table = append(table, r)
-		}
+		table := Frame2Table(qf)
 		fmt.Println(table)
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
 			"msg":   "トップから10件を表示",
@@ -141,45 +124,48 @@ func main() {
 		})
 	})
 
-	// r.GET("/search", func(c *gin.Context) {
-	// 	table := Table{}
-	// 	q := new(Query)
-	// 	if err := c.ShouldBind(q); err != nil {
-	// 		c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
-	// 			"msg": "Bad Query",
-	// 		})
-	// 		return
-	// 	}
-	// 	fmt.Printf("%+v\n", q)
-	// 	if len(table.品番) == 0 {
-	// 		c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
-	// 			"msg": "検索結果がありません",
-	// 		})
-	// 		return
-	// 	}
-	// 	c.HTML(http.StatusOK, "table.tmpl", gin.H{
-	// 		"msg":   fmt.Sprintf("%#v を検索, 30件を表示", q),
-	// 		"table": q.search(),
-	// 	})
-	// })
+	r.GET("/search", func(c *gin.Context) {
+		q := new(Query)
+		if err := c.ShouldBind(q); err != nil {
+			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
+				"msg": "Bad Query",
+			})
+			return
+		}
+		fmt.Printf("query: %+v\n", q)
+
+		// Search word
+		filtered := q.search()
+		table := Frame2Table(filtered)
+		if len(table) == 0 {
+			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
+				"msg": "検索結果がありません",
+			})
+			return
+		}
+		c.HTML(http.StatusOK, "table.tmpl", gin.H{
+			"msg":   fmt.Sprintf("%#v を検索, 30件を表示", q),
+			"table": table,
+		})
+	})
 
 	r.Run()
 }
 
-// func (q *Query) search() (result Table) {
-// 	table := Table{}
-// 	for _, r := range table {
-// 		bol := strings.Contains(r.Pid, q.Pid) &&
-// 			strings.Contains(r.Name, q.Name) &&
-// 			strings.Contains(r.Type, q.Type)
-// 		if bol {
-// 			result = append(result, r)
-// 			fmt.Println(r)
-// 		}
-// 	}
-// 	return
-// }
-//
+func (q *Query) search() qframe.QFrame {
+	re := regexp.MustCompile(ToRegex(q.Name)) //`.*A.*00.*`)
+	filter := qframe.Filter{
+		Comparator: func(p *string) bool { return re.MatchString(toString(p)) },
+		Column:     "品名",
+	}
+	re2 := regexp.MustCompile(ToRegex(q.Pid)) //`.*GAA.*`)
+	filter2 := qframe.Filter{
+		Comparator: func(p *string) bool { return re2.MatchString(toString(p)) },
+		Column:     "品番",
+	}
+	return qf.Filter(qframe.And(filter, filter2))
+}
+
 func toString(ptr *string) string {
 	if (ptr == nil) || reflect.ValueOf(ptr).IsNil() {
 		return ""
@@ -190,6 +176,38 @@ func toString(ptr *string) string {
 func toSlice(view qframe.StringView) (stringSlice []string) {
 	for _, v := range view.Slice() {
 		stringSlice = append(stringSlice, toString(v))
+	}
+	return
+}
+
+// ToRegex : スペース区切りを正規表現.*で埋める
+func ToRegex(s string) string {
+	fmt.Printf("raw query: %s\n", s)
+	r := strings.Join(strings.Split(s, " "), `.*`)
+	return fmt.Sprintf(`.*%s.*`, r)
+}
+
+// Frame2Table : QFrame をTableへ変換
+func Frame2Table(qf qframe.QFrame) (table Table) {
+	view := []qframe.StringView{
+		qf.MustStringView("品番"),
+		qf.MustStringView("品名"),
+		qf.MustStringView("形式寸法"),
+	}
+	pid := toSlice(view[0])
+	name := toSlice(view[1])
+	typed := toSlice(view[2])
+	// NameとTypeは常に表示する仕様
+	for i := 0; i < len(name); i++ {
+		if i > 1000 { // 最大1000件表示
+			break
+		}
+		r := Row{
+			Pid:  pid[i],
+			Name: name[i],
+			Type: typed[i],
+		}
+		table = append(table, r)
 	}
 	return
 }
