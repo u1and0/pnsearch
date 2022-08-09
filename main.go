@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -43,7 +44,9 @@ const (
 
 var (
 	showVersion bool
+	debug       bool
 	qf          qframe.QFrame
+	portnum     int
 )
 
 type (
@@ -68,10 +71,15 @@ type (
 // Show version
 func init() {
 	flag.BoolVar(&showVersion, "v", false, "Show version")
+	flag.BoolVar(&debug, "debug", false, "Run debug mode")
+	flag.IntVar(&portnum, "p", 9000, "Access port")
 	flag.Parse()
 	if showVersion {
 		fmt.Println("pnsearch version", VERSION)
 		os.Exit(0) // Exit with version info
+	}
+	if !debug {
+		gin.SetMode(gin.ReleaseMode)
 	}
 }
 
@@ -87,7 +95,7 @@ func init() {
 		log.Fatal(err)
 	}
 	qf = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
-	fmt.Println("qframe:", qf)
+	log.Println("qframe:", qf)
 }
 
 func main() {
@@ -99,7 +107,9 @@ func main() {
 	// API
 	r.GET("/", func(c *gin.Context) {
 		table := Frame2Table(qf)
-		fmt.Println(table)
+		if debug {
+			log.Println(table)
+		}
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
 			"msg":   fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table": table,
@@ -114,7 +124,7 @@ func main() {
 			})
 			return
 		}
-		fmt.Printf("query: %#v\n", q)
+		log.Println(fmt.Sprintf("query: %#v", q))
 
 		// Search keyword by query parameter
 		filtered := q.search()
@@ -131,7 +141,8 @@ func main() {
 		})
 	})
 
-	r.Run()
+	port := ":" + strconv.Itoa(portnum)
+	r.Run(port)
 }
 
 func (q *Query) search() qframe.QFrame {
