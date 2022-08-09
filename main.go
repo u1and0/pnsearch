@@ -21,7 +21,7 @@ const (
 	// VERSION : version info
 	VERSION = "v0.1.0"
 	// FILENAME = "./test/test50row.db"
-	FILENAME = "./data/sqlite3.db"
+	FILENAME = "../../data/sqlite3.db"
 	// SQLQ : 実行するSQL文
 	SQLQ = `SELECT
 			製番,
