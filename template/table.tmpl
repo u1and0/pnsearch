@@ -10,6 +10,7 @@
   <table class="table table-striped">
     <thead>
     <tr>
+      <th align="right"> 要求番号 </th>
       <th align="right"> 品番 </th>
       <th align="right"> 品名 </th>
       <th align="right"> 形式寸法 </th>
@@ -19,6 +20,7 @@
     <tbody>
     {{range .table}}
     <tr>
+      <td>{{ .UnitNo }}</td>
       <td>{{ .Pid }}</td>
       <td>{{ .Name }}</td>
       <td>{{ .Type }}</td>
