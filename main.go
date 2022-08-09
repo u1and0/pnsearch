@@ -32,9 +32,15 @@ const (
 			品名,
 			形式寸法,
 			単位,
+			材質,
 			メーカ,
+			仕入先略称,
+			工程名,
 			必要数,
-			部品発注数
+			部品発注数,
+			発注単価,
+			発注金額,
+			納入場所名
 			FROM order2
 			ORDER BY 製番
 			`
@@ -82,7 +88,7 @@ type (
 		Material          string    // 材質
 		Quantity          float64   // 員数
 		OrderQuantity     float64   // 必要数
-		OrderNum          float64   // 部品発注数
+		OrderNum          float64   // 部品部品発注数
 		OrderRest         float64   // 発注残数
 		OrderUnitPrice    float64   // 発注単価
 		OrderCost         float64   // 発注金額
@@ -217,7 +223,7 @@ func main() {
 			return
 		}
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
-			"msg":   fmt.Sprintf("%#v を検索, %d件を表示", q, len(table)),
+			"msg":   fmt.Sprintf("%#v を検索, %d件中%d件を表示", q, filtered.Len(), len(table)),
 			"table": table,
 		})
 	})
@@ -300,11 +306,11 @@ func Frame2Table(qf qframe.QFrame) (table Table) {
 		"メーカ":    qf.MustStringView("メーカ"),
 		"材質":     qf.MustStringView("材質"),
 		"工程名":    qf.MustStringView("工程名"),
-		"納入場所":   qf.MustStringView("納入場所"),
+		"納入場所":   qf.MustStringView("納入場所名"),
 	}
 	intView := map[string]qframe.IntView{
 		"必要数": qf.MustIntView("必要数"),
-		"発注数": qf.MustIntView("発注数"),
+		"発注数": qf.MustIntView("部品発注数"),
 	}
 	floatview := map[string]qframe.FloatView{
 		"発注単価": qf.MustFloatView("発注単価"),
