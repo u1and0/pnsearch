@@ -62,6 +62,8 @@ type (
 	Table []Row
 	// Column : toSlice()で変換されるqfの列
 	Column []string
+	// Columnf : toSlice()で変換されるqfの列
+	Columnf []float64
 	// Row : Tableの一行
 	Row struct {
 		ReceivedOrderNo   int16     // 受注No
@@ -306,16 +308,16 @@ func Frame2Table(qf qframe.QFrame) (table Table) {
 		"メーカ":    qf.MustStringView("メーカ"),
 		"材質":     qf.MustStringView("材質"),
 		"工程名":    qf.MustStringView("工程名"),
-		"納入場所":   qf.MustStringView("納入場所名"),
+		"納入場所名":  qf.MustStringView("納入場所名"),
 	}
-	intView := map[string]qframe.IntView{
-		"必要数": qf.MustIntView("必要数"),
-		"発注数": qf.MustIntView("部品発注数"),
-	}
-	floatview := map[string]qframe.FloatView{
-		"発注単価": qf.MustFloatView("発注単価"),
-		"発注金額": qf.MustFloatView("発注金額"),
-	}
+	// intView := map[string]qframe.IntView{
+	// 	"必要数": qf.MustIntView("必要数"),
+	// 	"発注数": qf.MustIntView("部品発注数"),
+	// }
+	// floatview := map[string]qframe.FloatView{
+	// 	"発注単価": qf.MustFloatView("発注単価"),
+	// 	"発注金額": qf.MustFloatView("発注金額"),
+	// }
 
 	// slices := [][]interface{}{}
 	slices := map[string]Column{}
@@ -324,12 +326,15 @@ func Frame2Table(qf qframe.QFrame) (table Table) {
 		slices[k] = toSlice(v)
 	}
 
+	slicesf := map[string]Columnf{
+		"発注単価": qf.MustFloatView("発注単価").Slice(),
+		"発注金額": qf.MustFloatView("発注金額").Slice(),
+	}
+
 	// 	toSlice(view["品番"]),
 	// 	toSlice(view["品名"]),
 	// 	toSlice(view["形式寸法"]),
 	// }
-
-	fmt.Println(intView, floatview)
 
 	// NameとTypeは常に表示する仕様
 	for i := 0; i < len(slices["品名"]); i++ {
@@ -337,10 +342,18 @@ func Frame2Table(qf qframe.QFrame) (table Table) {
 			break
 		}
 		r := Row{
-			UnitNo: slices["ユニットNo"][i],
-			Pid:    slices["品番"][i],
-			Name:   slices["品名"][i],
-			Type:   slices["形式寸法"][i],
+			UnitNo:        slices["ユニットNo"][i],
+			Pid:           slices["品番"][i],
+			Name:          slices["品名"][i],
+			Type:          slices["形式寸法"][i],
+			Maker:         slices["メーカ"][i],
+			Material:      slices["材質"][i],
+			Process:       slices["工程名"][i],
+			DeliveryPlace: slices["納入場所名"][i],
+
+			// Float
+			OrderRest:      slicesf["発注単価"][i],
+			OrderUnitPrice: slicesf["発注金額"][i],
 		}
 		table = append(table, r)
 	}
