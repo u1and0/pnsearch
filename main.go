@@ -54,7 +54,7 @@ const (
 var (
 	showVersion bool
 	debug       bool
-	qf          qframe.QFrame
+	allData     qframe.QFrame
 	portnum     int
 	filename    string
 )
@@ -186,8 +186,8 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	qf = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
-	log.Println("qframe:", qf)
+	allData = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
+	log.Println("qframe:", allData)
 }
 
 func main() {
@@ -198,7 +198,7 @@ func main() {
 
 	// API
 	r.GET("/", func(c *gin.Context) {
-		table := Frame2Table(qf)
+		table := T(allData)
 		if debug {
 			log.Println(table)
 		}
@@ -220,7 +220,7 @@ func main() {
 
 		// Search keyword by query parameter
 		filtered := q.search()
-		table := Frame2Table(filtered)
+		table := T(filtered)
 		if len(table) == 0 {
 			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
 				"msg": "検索結果がありません",
@@ -278,7 +278,7 @@ func (q *Query) search() qframe.QFrame {
 			Column:     "仕入先略称",
 		},
 	}
-	return qf.Filter(qframe.And(filters...))
+	return allData.Filter(qframe.And(filters...))
 }
 
 func toString(ptr *string) string {
@@ -288,7 +288,8 @@ func toString(ptr *string) string {
 	return *ptr
 }
 
-func toSlice(view qframe.StringView) (stringSlice []string) {
+func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
+	view := qf.MustStringView(colName)
 	for _, v := range view.Slice() {
 		stringSlice = append(stringSlice, toString(v))
 	}
@@ -301,43 +302,18 @@ func ToRegex(s string) string {
 	return fmt.Sprintf(`.*%s.*`, r)
 }
 
-// Frame2Table : QFrame をTableへ変換
-func Frame2Table(qf qframe.QFrame) (table Table) {
-	stringView := map[string]qframe.StringView{
-		"ユニットNo": qf.MustStringView("ユニットNo"),
-		"品番":     qf.MustStringView("品番"),
-		"品名":     qf.MustStringView("品名"),
-		"形式寸法":   qf.MustStringView("形式寸法"),
-		"メーカ":    qf.MustStringView("メーカ"),
-		"材質":     qf.MustStringView("材質"),
-		"工程名":    qf.MustStringView("工程名"),
-		"納入場所名":  qf.MustStringView("納入場所名"),
-	}
-	// intView := map[string]qframe.IntView{
-	// 	"必要数": qf.MustIntView("必要数"),
-	// 	"発注数": qf.MustIntView("部品発注数"),
-	// }
-	// floatview := map[string]qframe.FloatView{
-	// 	"発注単価": qf.MustFloatView("発注単価"),
-	// 	"発注金額": qf.MustFloatView("発注金額"),
-	// }
-
-	// slices := [][]interface{}{}
+// T : QFrame をTableへ変換
+func T(qf qframe.QFrame) (table Table) {
 	slices := map[string]Column{}
-	for k := range stringView {
-		v := qf.MustStringView(k)
-		slices[k] = toSlice(v)
+	for _, k := range []string{"ユニットNo", "品番", "品名", "形式寸法",
+		"メーカ", "材質", "工程名", "納入場所名"} {
+		slices[k] = toSlice(qf, k)
 	}
 
-	slicesf := map[string]Columnf{
-		"発注単価": qf.MustFloatView("発注単価").Slice(),
-		"発注金額": qf.MustFloatView("発注金額").Slice(),
+	slicef := map[string]Columnf{}
+	for _, k := range []string{"発注単価", "発注金額"} {
+		slicef[k] = qf.MustFloatView(k).Slice()
 	}
-
-	// 	toSlice(view["品番"]),
-	// 	toSlice(view["品名"]),
-	// 	toSlice(view["形式寸法"]),
-	// }
 
 	// NameとTypeは常に表示する仕様
 	for i := 0; i < len(slices["品名"]); i++ {
@@ -355,8 +331,8 @@ func Frame2Table(qf qframe.QFrame) (table Table) {
 			DeliveryPlace: slices["納入場所名"][i],
 
 			// Float
-			OrderRest:      slicesf["発注単価"][i],
-			OrderUnitPrice: slicesf["発注金額"][i],
+			OrderRest:      slicef["発注単価"][i],
+			OrderUnitPrice: slicef["発注金額"][i],
 		}
 		table = append(table, r)
 	}
