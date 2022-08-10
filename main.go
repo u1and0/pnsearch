@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
@@ -21,28 +20,14 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.1.2"
+	VERSION = "v0.1.2r"
 	// FILENAME = "./test/test50row.db"
 	FILENAME = "./data/sqlite3.db"
 	// SQLQ : 実行するSQL文
 	SQLQ = `SELECT
-			製番,
-			ユニットNo,
-			品番,
-			品名,
-			形式寸法,
-			単位,
-			材質,
-			メーカ,
-			仕入先略称,
-			工程名,
-			必要数,
-			部品発注数,
-			発注単価,
-			発注金額,
-			納入場所名
+			*
 			FROM order2
-			ORDER BY 製番
+			ORDER BY 発注日
 			`
 	// LIMIT 1000
 	// WHERE rowid > 800000
@@ -64,86 +49,88 @@ type (
 	Table []Row
 	// Column : toSlice()で変換されるqfの列
 	Column []string
-	// Columnf : toSlice()で変換されるqfの列
-	Columnf []float64
 	// Row : Tableの一行
 	Row struct {
-		ReceivedOrderNo   int16     // 受注No
-		ProductNo         string    // 製番
-		ProductNo_Name    string    // 製番_品名
-		UnitNo            string    // ユニットNo
-		Pid               string    // 品番
-		Name              string    // 品名
-		Type              string    // 形式寸法
-		Unit              string    // 単位
-		PurchaseQuantity  float64   // 仕入原価数量
-		PurchaseUnitPrice float64   // 仕入原価単価
-		PurchaseCost      float64   // 仕入原価金額
-		StockQuantity     float64   // 在庫払出数量
-		StockUnitPrice    float64   // 在庫払出単価
-		StockCost         float64   // 在庫払出金額
-		RecordDate        time.Time // 登録日
-		OrderDate         time.Time // 発注日
-		DeliveryDate      time.Time // 納期
-		ReplyDeliveryDate time.Time // 回答納期
-		RealDeliveryDate  time.Time // 納入日
-		OrderDivision     string    // 発注区分
-		Maker             string    // メーカ
-		Material          string    // 材質
-		Quantity          float64   // 員数
-		OrderQuantity     float64   // 必要数
-		OrderNum          float64   // 部品部品発注数
-		OrderRest         float64   // 発注残数
-		OrderUnitPrice    float64   // 発注単価
-		OrderCost         float64   // 発注金額
-		ProgressLevel     string    // 進捗レベル
-		Process           string    // 工程名
-		Vendor            string    // 仕入先略称
-		OrderNo           int16     // オーダーNo
-		DeliveryPlace     string    // 納入場所名
-		Misc              string    // 部品備考
-		CostCode          int16     // 原価費目ｺｰﾄﾞ
-		CostName          string    // 原価費目名
+		ReceivedOrderNo   int16  // 受注No
+		ProductNo         string // 製番
+		ProductNoName     string // 製番_品名
+		UnitNo            string // ユニットNo
+		Pid               string // 品番
+		Name              string // 品名
+		Type              string // 形式寸法
+		Unit              string // 単位
+		PurchaseQuantity  string // 仕入原価数量
+		PurchaseUnitPrice string // 仕入原価単価
+		PurchaseCost      string // 仕入原価金額
+		StockQuantity     string // 在庫払出数量
+		StockUnitPrice    string // 在庫払出単価
+		StockCost         string // 在庫払出金額
+		RecordDate        string // 登録日
+		OrderDate         string // 発注日
+		DeliveryDate      string // 納期
+		ReplyDeliveryDate string // 回答納期
+		RealDeliveryDate  string // 納入日
+		OrderDivision     string // 発注区分
+		Maker             string // メーカ
+		Material          string // 材質
+		Quantity          string // 員数
+		OrderQuantity     string // 必要数
+		OrderNum          string // 部品部品発注数
+		OrderRest         string // 発注残数
+		OrderUnitPrice    string // 発注単価
+		OrderCost         string // 発注金額
+		ProgressLevel     string // 進捗レベル
+		Process           string // 工程名
+		Vendor            string // 仕入先略称
+		OrderNo           string // オーダーNo
+		DeliveryPlace     string // 納入場所名
+		Misc              string // 部品備考
+		CostCode          string // 原価費目ｺｰﾄﾞ
+		CostName          string // 原価費目名
 	}
 
-	/*
-			"index" INTEGER,
-			"受注No" TEXT,
-			"製番" TEXT,
-			"製番_品名" TEXT,
-			"ユニットNo" TEXT,
-			"品番" TEXT,
-			"品名" TEXT,
-			"形式寸法" TEXT,
-			"単位" TEXT,
-			"仕入原価数量" TEXT,
-			"仕入原価単価" INTEGER,
-			"仕入原価金額" INTEGER,
-			"在庫払出数量" TEXT,
-			"在庫払出単価" INTEGER,
-			"在庫払出金額" INTEGER,
-			"登録日" DATE,
-			"発注日" DATE,
-			"納期" DATE,
-			"回答納期" DATE,
-			"納入日" DATE,
-			"発注区分" TEXT,
-			"メーカ" TEXT,
-			"材質" TEXT,
-			"員数" TEXT,
-			"必要数" TEXT,
-			"部品発注数" TEXT,
-			"発注残数" TEXT,
-			"発注単価" REAL,
-			"発注金額" REAL,
-			"進捗レベル" TEXT,
-			"工程名" TEXT,
-			"仕入先略称" TEXT,
-			"オーダーNo" TEXT,
-			"納入場所名" TEXT,
-			"部品備考" TEXT,
-			"原価費目ｺｰﾄﾞ" TEXT,
-			"原価費目名" TEXT
+	/* テーブル情報
+	検索、ソートのことは考えず
+	表示とコーディングしやすさのことを考慮して、
+	すべてTEXT型に変更した。
+		CREATE TABLE order2 (
+		"index" INTEGER,
+		  "受注No" TEXT,
+		  "製番" TEXT,
+		  "製番_品名" TEXT,
+		  "ユニットNo" TEXT,
+		  "品番" TEXT,
+		  "品名" TEXT,
+		  "形式寸法" TEXT,
+		  "単位" TEXT,
+		  "仕入原価数量" TEXT,
+		  "仕入原価単価" TEXT,
+		  "仕入原価金額" TEXT,
+		  "在庫払出数量" TEXT,
+		  "在庫払出単価" TEXT,
+		  "在庫払出金額" TEXT,
+		  "登録日" TEXT,
+		  "発注日" TEXT,
+		  "納期" TEXT,
+		  "回答納期" TEXT,
+		  "納入日" TEXT,
+		  "発注区分" TEXT,
+		  "メーカ" TEXT,
+		  "材質" TEXT,
+		  "員数" TEXT,
+		  "必要数" TEXT,
+		  "部品発注数" TEXT,
+		  "発注残数" TEXT,
+		  "発注単価" TEXT,
+		  "発注金額" TEXT,
+		  "進捗レベル" TEXT,
+		  "工程名" TEXT,
+		  "仕入先略称" TEXT,
+		  "オーダーNo" TEXT,
+		  "納入場所名" TEXT,
+		  "部品備考" TEXT,
+		  "原価費目ｺｰﾄﾞ" TEXT,
+		  "原価費目名" TEXT
 		);
 	*/
 
@@ -297,22 +284,20 @@ func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
 }
 
 // ToRegex : スペース区切りを正規表現.*で埋める
+// (?i) for ignore case
+// .* for any string
 func ToRegex(s string) string {
 	r := strings.Join(strings.Split(s, " "), `.*`)
-	return fmt.Sprintf(`.*%s.*`, r)
+	return fmt.Sprintf(`(?i).*%s.*`, r)
 }
 
 // T : QFrame をTableへ変換
 func T(qf qframe.QFrame) (table Table) {
 	slices := map[string]Column{}
 	for _, k := range []string{"ユニットNo", "品番", "品名", "形式寸法",
-		"メーカ", "材質", "工程名", "納入場所名"} {
+		"メーカ", "材質", "工程名", "納入場所名", "発注単価", "発注金額",
+		"発注日", "納入日"} {
 		slices[k] = toSlice(qf, k)
-	}
-
-	slicef := map[string]Columnf{}
-	for _, k := range []string{"発注単価", "発注金額"} {
-		slicef[k] = qf.MustFloatView(k).Slice()
 	}
 
 	// NameとTypeは常に表示する仕様
@@ -321,18 +306,18 @@ func T(qf qframe.QFrame) (table Table) {
 			break
 		}
 		r := Row{
-			UnitNo:        slices["ユニットNo"][i],
-			Pid:           slices["品番"][i],
-			Name:          slices["品名"][i],
-			Type:          slices["形式寸法"][i],
-			Maker:         slices["メーカ"][i],
-			Material:      slices["材質"][i],
-			Process:       slices["工程名"][i],
-			DeliveryPlace: slices["納入場所名"][i],
-
-			// Float
-			OrderRest:      slicef["発注単価"][i],
-			OrderUnitPrice: slicef["発注金額"][i],
+			UnitNo:           slices["ユニットNo"][i],
+			Pid:              slices["品番"][i],
+			Name:             slices["品名"][i],
+			Type:             slices["形式寸法"][i],
+			Maker:            slices["メーカ"][i],
+			Material:         slices["材質"][i],
+			Process:          slices["工程名"][i],
+			DeliveryPlace:    slices["納入場所名"][i],
+			OrderUnitPrice:   slices["発注単価"][i],
+			OrderCost:        slices["発注金額"][i],
+			OrderDate:        slices["発注日"][i],
+			RealDeliveryDate: slices["納入日"][i],
 		}
 		table = append(table, r)
 	}
