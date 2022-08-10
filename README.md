@@ -17,7 +17,7 @@ XXX.XXX はFEKO PCのIPアドレス、ポート9000は暫定的に固定値と�
 スペースは任意の数の文字列(検索に正規表現を使用)に変換されます。
 
 
-## 開発者向けの説明
+## 運用者向けの説明
 
 下記exeを実行すると自分のPCをサーバーとして使えます。（ポート開放が必要かもしれません。）
 上記例のIPアドレスを自分のものに変えるか、"localhost"に変えてください。
@@ -26,12 +26,25 @@ XXX.XXX はFEKO PCのIPアドレス、ポート9000は暫定的に固定値と�
 下記dbファイルのテーブル名"order2"を参照しています。
 	...¥PNsearch¥data¥sqlite3.db
 
-ソースコード: 225行の小さなファイルです。これからブラッシュアップ予定です。
+実行ファイルの使い方
+$ pnsearch.exe -h
+Usage of ../../pnsearch:
+  -debug
+        Run debug mode
+  -f string
+        SQL database file path (default "./data/sqlite3.db")
+  -p int
+        Access port (default 9000)
+  -v    Show version
+
+
+## 開発者向けの説明
+
+ソースコード: main.go
 	...¥PNsearch¥src¥pnsearch¥main.go
 
 HTMLテンプレート: 表示を変えられます。
 	...¥PNsearch¥template¥table.tmpl
-
 
 ### ビルド, インストール
 
