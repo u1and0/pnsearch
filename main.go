@@ -21,7 +21,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.1.0"
+	VERSION = "v0.1.2"
 	// FILENAME = "./test/test50row.db"
 	FILENAME = "./data/sqlite3.db"
 	// SQLQ : 実行するSQL文
@@ -44,6 +44,7 @@ const (
 			FROM order2
 			ORDER BY 製番
 			`
+	// LIMIT 1000
 	// WHERE rowid > 800000
 
 	// MAXROW : qfからTableへ変換する最大行数
@@ -55,6 +56,7 @@ var (
 	debug       bool
 	qf          qframe.QFrame
 	portnum     int
+	filename    string
 )
 
 type (
@@ -162,6 +164,7 @@ func init() {
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.BoolVar(&debug, "debug", false, "Run debug mode")
 	flag.IntVar(&portnum, "p", 9000, "Access port")
+	flag.StringVar(&filename, "f", FILENAME, "SQL database file path")
 	flag.Parse()
 	if showVersion {
 		fmt.Println("pnsearch version", VERSION)
@@ -175,7 +178,7 @@ func init() {
 // DB in memory
 // const のSQLQで読み込まれる全データをqf に読み込む。
 func init() {
-	db, err := sql.Open("sqlite3", FILENAME)
+	db, err := sql.Open("sqlite3", filename)
 	if err != nil {
 		log.Fatal(err)
 	}
