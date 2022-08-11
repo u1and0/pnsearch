@@ -216,9 +216,9 @@ func main() {
 
 	s := r.Group("/search")
 	{
-		s.GET("/", func(c *gin.Context) { returnTempl(c, "table.tmpl") })
-		s.GET("/ui", func(c *gin.Context) { returnTempl(c, "ui.tmpl") })
-		s.GET("/json", func(c *gin.Context) { returnTempl(c, "") })
+		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "table.tmpl") })
+		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
+		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
 	}
 
 	port := ":" + strconv.Itoa(portnum)
@@ -271,15 +271,17 @@ func (q *Query) search() qframe.QFrame {
 	return allData.Filter(qframe.And(filters...))
 }
 
-func returnTempl(c *gin.Context, templateName string) {
+// ReturnTempl : HTMLテンプレートを返す。
+// テンプレート名がない場合はJSONを返す。
+func ReturnTempl(c *gin.Context, templateName string) {
 	// Extract query
 	q := new(Query)
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg})
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
 		return
 	}
@@ -290,9 +292,9 @@ func returnTempl(c *gin.Context, templateName string) {
 	if filtered.Len() == 0 {
 		msg := fmt.Sprintf("%#v を検索, 検索結果がありません", q)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg})
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
 		return
 	}
@@ -300,14 +302,15 @@ func returnTempl(c *gin.Context, templateName string) {
 	// Display result
 	// Default descending order
 	sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+	l := filtered.Len()
 	if templateName != "" {
 		table := T(sorted)
-		msg := fmt.Sprintf("%#v を検索, %d件中%d件を表示", q, filtered.Len(), len(table))
-		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table})
+		msg := fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
+		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table, "query": q})
 	} else {
-		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, filtered.Len())
+		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
 		jsonObj := J(sorted)
-		c.IndentedJSON(http.StatusOK, gin.H{"msg": msg, "table": jsonObj})
+		c.IndentedJSON(http.StatusOK, gin.H{"msg": msg, "length": l, "table": jsonObj, "query": q})
 	}
 }
 
