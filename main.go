@@ -290,7 +290,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	// Search keyword by query parameter
 	filtered := q.search()
 	if filtered.Len() == 0 {
-		msg := fmt.Sprintf("%#v を検索, 検索結果がありません", q)
+		msg := "検索結果がありません"
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
 		} else {
