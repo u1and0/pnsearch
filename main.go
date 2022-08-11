@@ -23,6 +23,8 @@ const (
 	VERSION = "v0.1.2r"
 	// FILENAME = "./test/test50row.db"
 	FILENAME = "./data/sqlite3.db"
+	// PORT : default port num
+	PORT = 9000
 	// SQLQ : 実行するSQL文
 	SQLQ = `SELECT
 			*
@@ -150,7 +152,7 @@ type (
 func init() {
 	flag.BoolVar(&showVersion, "v", false, "Show version")
 	flag.BoolVar(&debug, "debug", false, "Run debug mode")
-	flag.IntVar(&portnum, "p", 9000, "Access port")
+	flag.IntVar(&portnum, "p", PORT, "Access port")
 	flag.StringVar(&filename, "f", FILENAME, "SQL database file path")
 	flag.Parse()
 	if showVersion {
