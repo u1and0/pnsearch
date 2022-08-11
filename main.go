@@ -145,6 +145,8 @@ type (
 		Type      string `form:"形式寸法"`
 		Maker     string `form:"メーカ"`
 		Vendor    string `form:"仕入先"`
+		SortOrder string `form:"sort"`
+		SortAsc   bool   `form:"asc"`
 	}
 )
 
@@ -209,7 +211,9 @@ func main() {
 
 		// Search keyword by query parameter
 		filtered := q.search()
-		table := T(filtered)
+		// Default descending order
+		sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+		table := T(sorted)
 		if len(table) == 0 {
 			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
 				"msg": fmt.Sprintf("%#v を検索, 検索結果がありません", q),
