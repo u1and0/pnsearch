@@ -47,8 +47,23 @@ var (
 )
 
 type (
-	// Table : HTMLへ書き込むための行指向のstruct
+	// Table : HTMLへ書き込むための行指向の構造体
 	Table []Row
+	// Object : JSONオブジェクト返すための列試行の構造体
+	Object struct {
+		UnitNo           Column `json:"ユニットNo"`
+		Pid              Column `json:"品番"`
+		Name             Column `json:"品名"`
+		Type             Column `json:"形式寸法"`
+		Maker            Column `json:"メーカ"`
+		Material         Column `json:"材質"`
+		Process          Column `json:"工程名"`
+		DeliveryPlace    Column `json:"納入場所名"`
+		OrderUnitPrice   Column `json:"発注単価"`
+		OrderCost        Column `json:"発注金額"`
+		OrderDate        Column `json:"発注日"`
+		RealDeliveryDate Column `json:"納入日"`
+	}
 	// Column : toSlice()で変換されるqfの列
 	Column []string
 	// Row : Tableの一行
@@ -199,32 +214,12 @@ func main() {
 		})
 	})
 
-	r.GET("/search", func(c *gin.Context) {
-		q := new(Query)
-		if err := c.ShouldBind(q); err != nil {
-			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
-				"msg": fmt.Sprintf("%#v Bad Query", q),
-			})
-			return
-		}
-		log.Println(fmt.Sprintf("query: %#v", q))
-
-		// Search keyword by query parameter
-		filtered := q.search()
-		// Default descending order
-		sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
-		table := T(sorted)
-		if len(table) == 0 {
-			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
-				"msg": fmt.Sprintf("%#v を検索, 検索結果がありません", q),
-			})
-			return
-		}
-		c.HTML(http.StatusOK, "table.tmpl", gin.H{
-			"msg":   fmt.Sprintf("%#v を検索, %d件中%d件を表示", q, filtered.Len(), len(table)),
-			"table": table,
-		})
-	})
+	s := r.Group("/search")
+	{
+		s.GET("/", func(c *gin.Context) { returnTempl(c, "table.tmpl") })
+		s.GET("/ui", func(c *gin.Context) { returnTempl(c, "ui.tmpl") })
+		s.GET("/json", func(c *gin.Context) { returnTempl(c, "") })
+	}
 
 	port := ":" + strconv.Itoa(portnum)
 	r.Run(port)
@@ -241,6 +236,8 @@ func (q *Query) search() qframe.QFrame {
 		"仕入先":  regexp.MustCompile(ToRegex(q.Vendor)),
 	}
 
+	// 原因不明だがfunctionや配列でregexp.MustCompile()してもうまく検索されないので
+	// スライスで冗長ながら書き下すしかない。
 	filters := []qframe.FilterClause{
 		qframe.Filter{
 			Comparator: func(p *string) bool { return res["製番"].MatchString(toString(p)) },
@@ -274,6 +271,46 @@ func (q *Query) search() qframe.QFrame {
 	return allData.Filter(qframe.And(filters...))
 }
 
+func returnTempl(c *gin.Context, templateName string) {
+	// Extract query
+	q := new(Query)
+	if err := c.ShouldBind(q); err != nil {
+		msg := fmt.Sprintf("%#v Bad Query", q)
+		if templateName != "" {
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg})
+		}
+		return
+	}
+	log.Println(fmt.Sprintf("query: %#v", q))
+
+	// Search keyword by query parameter
+	filtered := q.search()
+	if filtered.Len() == 0 {
+		msg := fmt.Sprintf("%#v を検索, 検索結果がありません", q)
+		if templateName != "" {
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg})
+		}
+		return
+	}
+
+	// Display result
+	// Default descending order
+	sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+	if templateName != "" {
+		table := T(sorted)
+		msg := fmt.Sprintf("%#v を検索, %d件中%d件を表示", q, filtered.Len(), len(table))
+		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table})
+	} else {
+		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, filtered.Len())
+		jsonObj := J(sorted)
+		c.IndentedJSON(http.StatusOK, gin.H{"msg": msg, "table": jsonObj})
+	}
+}
+
 func toString(ptr *string) string {
 	if (ptr == nil) || reflect.ValueOf(ptr).IsNil() {
 		return ""
@@ -298,6 +335,23 @@ func ToRegex(s string) string {
 	s = strings.TrimSpace(s)                  // 左右の空白削除
 	s = strings.Join(strings.Fields(s), `.*`) // スペースを.*に変換
 	return fmt.Sprintf(`(?i).*%s.*`, s)
+}
+
+// J : QFrame をJSONオブジェクトへ変換
+func J(qf qframe.QFrame) (obj Object) {
+	obj.UnitNo = toSlice(qf, "ユニットNo")
+	obj.Pid = toSlice(qf, "品番")
+	obj.Name = toSlice(qf, "品名")
+	obj.Type = toSlice(qf, "形式寸法")
+	obj.Maker = toSlice(qf, "メーカ")
+	obj.Material = toSlice(qf, "材質")
+	obj.Process = toSlice(qf, "工程名")
+	obj.DeliveryPlace = toSlice(qf, "納入場所名")
+	obj.OrderUnitPrice = toSlice(qf, "発注単価")
+	obj.OrderCost = toSlice(qf, "発注金額")
+	obj.OrderDate = toSlice(qf, "発注日")
+	obj.RealDeliveryDate = toSlice(qf, "納入日")
+	return
 }
 
 // T : QFrame をTableへ変換
