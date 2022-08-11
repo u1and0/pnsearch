@@ -199,7 +199,7 @@ func main() {
 		q := new(Query)
 		if err := c.ShouldBind(q); err != nil {
 			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
-				"msg": "Bad Query",
+				"msg": fmt.Sprintf("%#v Bad Query", q),
 			})
 			return
 		}
@@ -210,7 +210,7 @@ func main() {
 		table := T(filtered)
 		if len(table) == 0 {
 			c.HTML(http.StatusBadRequest, "table.tmpl", gin.H{
-				"msg": "検索結果がありません",
+				"msg": fmt.Sprintf("%#v を検索, 検索結果がありません", q),
 			})
 			return
 		}
@@ -287,8 +287,11 @@ func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
 // (?i) for ignore case
 // .* for any string
 func ToRegex(s string) string {
-	r := strings.Join(strings.Split(s, " "), `.*`)
-	return fmt.Sprintf(`(?i).*%s.*`, r)
+	s = strings.ReplaceAll(s, "　", " ")       // 全角半角変換
+	s = strings.ReplaceAll(s, "\t", " ")      // タブ文字削除
+	s = strings.TrimSpace(s)                  // 左右の空白削除
+	s = strings.Join(strings.Fields(s), `.*`) // スペースを.*に変換
+	return fmt.Sprintf(`(?i).*%s.*`, s)
 }
 
 // T : QFrame をTableへ変換
