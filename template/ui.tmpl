@@ -2,11 +2,29 @@
 <html lang="ja">
 <head>
   <title>PN Search Web</title>
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
 
 <body>
-  {{ .query }}を検索, {{ .msg }}
+  <form name="window" method="get" action="/search/ui">
+    <label for="製番">製番</label>
+    <input type="text" name="製番" value="{{ .query.ProductNo }}" size="10">
+    <label for="要求番号">要求番号</label>
+    <input type="text" name="要求番号" value="{{ .query.UnitNo }}" size="10">
+    <label for="品番">品番</label>
+    <input type="text" name="品番" value="{{ .query.Pid }}" size="10">
+    <label for="品名">品名</label>
+    <input type="text" name="品名" value="{{ .query.Name }}" size="10">
+    <label for="形式寸法">形式寸法</label>
+    <input type="text" name="形式寸法" value="{{ .query.Type }}" size="10">
+    <label for="メーカ">メーカ</label>
+    <input type="text" name="メーカ" value="{{ .query.Maker }}" size="10">
+    <label for="仕入先">仕入先</label>
+    <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
+    <input type="submit" id="submit" value="&#xf002;" class="fas">
+  </form>
+  {{ .msg }}
   <table class="table table-striped">
     <thead>
     <tr>
