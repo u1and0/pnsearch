@@ -329,7 +329,6 @@ func J(qf qframe.QFrame) (obj Object) {
 
 // ToTable : QFrame をTableへ変換
 func ToTable(qf qframe.QFrame) (table Table) {
-	// 順序を保持するためにforにColumnTypeMap()ではなくColumnNames()を使う
 	for _, colName := range qf.ColumnNames() {
 		column := toSlice(qf, colName)
 		table = append(table, column)
@@ -340,6 +339,12 @@ func ToTable(qf qframe.QFrame) (table Table) {
 // T : transpose Table
 func (table Table) T() Table {
 	xl := len(table[0])
+	xl = func() int { // table MAX length: MAXROW(1000)
+		if MAXROW < xl {
+			return MAXROW
+		}
+		return xl
+	}()
 	yl := len(table)
 	result := make(Table, xl)
 	for i := range result {
