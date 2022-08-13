@@ -48,7 +48,7 @@ var (
 
 type (
 	// Table : HTMLへ書き込むための行指向の構造体
-	Table []Row
+	Table []Column
 	// Object : JSONオブジェクト返すための列試行の構造体
 	Object struct {
 		UnitNo           Column `json:"ユニットNo"`
@@ -204,7 +204,7 @@ func main() {
 
 	// API
 	r.GET("/", func(c *gin.Context) {
-		table := T(allData)
+		table := ToTable(allData)
 		if debug {
 			log.Println(table)
 		}
@@ -304,7 +304,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
 	l := filtered.Len()
 	if templateName != "" {
-		table := T(sorted)
+		table := ToTable(sorted)
 		msg := fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
 		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table, "query": q})
 	} else {
@@ -357,35 +357,30 @@ func J(qf qframe.QFrame) (obj Object) {
 	return
 }
 
-// T : QFrame をTableへ変換
-func T(qf qframe.QFrame) (table Table) {
-	slices := map[string]Column{}
+// ToTable : QFrame をTableへ変換
+func ToTable(qf qframe.QFrame) (table Table) {
+	// columnMap := map[string]Column{}
 	for _, k := range []string{"ユニットNo", "品番", "品名", "形式寸法",
 		"メーカ", "材質", "工程名", "納入場所名", "発注単価", "発注金額",
 		"発注日", "納入日"} {
-		slices[k] = toSlice(qf, k)
+		column := toSlice(qf, k)
+		table = append(table, column)
 	}
+	return table.T()
+}
 
-	// NameとTypeは常に表示する仕様
-	for i := 0; i < len(slices["品名"]); i++ {
-		if i >= MAXROW { // 最大1000件表示
-			break
-		}
-		r := Row{
-			UnitNo:           slices["ユニットNo"][i],
-			Pid:              slices["品番"][i],
-			Name:             slices["品名"][i],
-			Type:             slices["形式寸法"][i],
-			Maker:            slices["メーカ"][i],
-			Material:         slices["材質"][i],
-			Process:          slices["工程名"][i],
-			DeliveryPlace:    slices["納入場所名"][i],
-			OrderUnitPrice:   slices["発注単価"][i],
-			OrderCost:        slices["発注金額"][i],
-			OrderDate:        slices["発注日"][i],
-			RealDeliveryDate: slices["納入日"][i],
-		}
-		table = append(table, r)
+// T : transpose Table
+func (table Table) T() Table {
+	xl := len(table[0])
+	yl := len(table)
+	result := make(Table, xl)
+	for i := range result {
+		result[i] = make([]string, yl)
 	}
-	return
+	for i := 0; i < xl; i++ {
+		for j := 0; j < yl; j++ {
+			result[i][j] = table[j][i]
+		}
+	}
+	return result
 }
