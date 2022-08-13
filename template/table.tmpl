@@ -10,38 +10,14 @@
   <table class="table table-striped">
     <thead>
     <tr>
-      <th align="center"> 発注日 </th>
-      <th align="center"> 払出日 </th>
-      <th align="center"> 要求番号 </th>
-      <th align="center"> 品番 </th>
-      <th align="center"> 品名 </th>
-      <th align="center"> 形式寸法 </th>
-      <th align="center"> メーカ </th>
-      <th align="center"> 材質 </th>
-      <th align="center"> 必要数 </th>
-      <th align="center"> 発注単価 </th>
-      <th align="center"> 発注金額 </th>
-      <th align="center"> 工程名 </th>
-      <th align="center"> 納入場所 </th>
+      {{range .header}} <th align="center"> {{.}} </th> {{end}}
     </tr>
     </thead>
 
     <tbody>
     {{range .table}}
     <tr>
-      <td>{{ .OrderDate }}</td>                <!-- 発注日<br>又は<br>発注指示日 -->
-      <td>{{ .RealDeliveryDate }}</td>         <!-- 納入完了日<br>又は<br>払出日 -->
-      <td>{{ .UnitNo }}</td>                   <!-- 要求番号 -->
-      <td>{{ .Pid }}</td>                      <!-- 品番 -->
-      <td>{{ .Name }}</td>                     <!-- 品名 -->
-      <td>{{ .Type }}</td>                     <!-- 形式寸法 -->
-      <td>{{ .Maker }}</td>                    <!-- メーカ -->
-      <td>{{ .Material }}</td>                 <!-- 材質 -->
-      <td>{{ .OrderQuantity }}</td>            <!-- 必要数 -->
-      <td>{{ .OrderUnitPrice }}</td>           <!-- 発注単価 -->
-      <td>{{ .OrderCost }}</td>                <!-- 発注金額 -->
-      <td>{{ .Process }}</td>                  <!-- 工程名 -->
-      <td>{{ .DeliveryPlace }}</td>            <!-- 納入場所 -->
+      {{range .}}<td>{{.}}</td>{{end}}
     </tr>
     {{end}}
     </tbody>

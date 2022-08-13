@@ -52,7 +52,7 @@ var (
 
 type (
 	// Table : HTMLへ書き込むための行指向の構造体
-	Table []Row
+	Table []Column
 	// Object : JSONオブジェクト返すための列試行の構造体
 	Object struct {
 		UnitNo           Column `json:"ユニットNo"`
@@ -70,45 +70,6 @@ type (
 	}
 	// Column : toSlice()で変換されるqfの列
 	Column []string
-	// Row : Tableの一行
-	Row struct {
-		ReceivedOrderNo   int16  // 受注No
-		ProductNo         string // 製番
-		ProductNoName     string // 製番_品名
-		UnitNo            string // ユニットNo
-		Pid               string // 品番
-		Name              string // 品名
-		Type              string // 形式寸法
-		Unit              string // 単位
-		PurchaseQuantity  string // 仕入原価数量
-		PurchaseUnitPrice string // 仕入原価単価
-		PurchaseCost      string // 仕入原価金額
-		StockQuantity     string // 在庫払出数量
-		StockUnitPrice    string // 在庫払出単価
-		StockCost         string // 在庫払出金額
-		RecordDate        string // 登録日
-		OrderDate         string // 発注日
-		DeliveryDate      string // 納期
-		ReplyDeliveryDate string // 回答納期
-		RealDeliveryDate  string // 納入日
-		OrderDivision     string // 発注区分
-		Maker             string // メーカ
-		Material          string // 材質
-		Quantity          string // 員数
-		OrderQuantity     string // 必要数
-		OrderNum          string // 部品部品発注数
-		OrderRest         string // 発注残数
-		OrderUnitPrice    string // 発注単価
-		OrderCost         string // 発注金額
-		ProgressLevel     string // 進捗レベル
-		Process           string // 工程名
-		Vendor            string // 仕入先略称
-		OrderNo           string // オーダーNo
-		DeliveryPlace     string // 納入場所名
-		Misc              string // 部品備考
-		CostCode          string // 原価費目ｺｰﾄﾞ
-		CostName          string // 原価費目名
-	}
 
 	/* テーブル情報
 	検索、ソートのことは考えず
@@ -197,6 +158,13 @@ func init() {
 		log.Fatal(err)
 	}
 	allData = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
+	typemap := allData.ColumnTypeMap()
+	// Drop NOT string type columnt
+	for k, v := range typemap {
+		if v != "string" {
+			allData = allData.Drop(k)
+		}
+	}
 	log.Println("qframe:", allData)
 }
 
@@ -208,7 +176,7 @@ func main() {
 
 	// API
 	r.GET("/", func(c *gin.Context) {
-		table := T(allData)
+		table := ToTable(allData)
 		if debug {
 			log.Println(table)
 		}
@@ -293,6 +261,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 
 	// Search keyword by query parameter
 	filtered := q.search()
+
+	// Search Failure
 	if filtered.Len() == 0 {
 		msg := "検索結果がありません"
 		if templateName != "" {
@@ -303,14 +273,14 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		return
 	}
 
-	// Display result
+	// Search Success
 	// Default descending order
 	sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
 	l := filtered.Len()
 	if templateName != "" {
-		table := T(sorted)
+		table := ToTable(sorted)
 		msg := fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table, "query": q})
+		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table, "query": q, "header": sorted.ColumnNames()})
 	} else {
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
 		jsonObj := J(sorted)
@@ -361,35 +331,33 @@ func J(qf qframe.QFrame) (obj Object) {
 	return
 }
 
-// T : QFrame をTableへ変換
-func T(qf qframe.QFrame) (table Table) {
-	slices := map[string]Column{}
-	for _, k := range []string{"ユニットNo", "品番", "品名", "形式寸法",
-		"メーカ", "材質", "工程名", "納入場所名", "発注単価", "発注金額",
-		"発注日", "納入日"} {
-		slices[k] = toSlice(qf, k)
+// ToTable : QFrame をTableへ変換
+func ToTable(qf qframe.QFrame) (table Table) {
+	for _, colName := range qf.ColumnNames() {
+		column := toSlice(qf, colName)
+		table = append(table, column)
 	}
+	return table.T()
+}
 
-	// NameとTypeは常に表示する仕様
-	for i := 0; i < len(slices["品名"]); i++ {
-		if i >= MAXROW { // 最大1000件表示
-			break
+// T : transpose Table
+func (table Table) T() Table {
+	xl := len(table[0])
+	xl = func() int { // table MAX length: MAXROW(1000)
+		if MAXROW < xl {
+			return MAXROW
 		}
-		r := Row{
-			UnitNo:           slices["ユニットNo"][i],
-			Pid:              slices["品番"][i],
-			Name:             slices["品名"][i],
-			Type:             slices["形式寸法"][i],
-			Maker:            slices["メーカ"][i],
-			Material:         slices["材質"][i],
-			Process:          slices["工程名"][i],
-			DeliveryPlace:    slices["納入場所名"][i],
-			OrderUnitPrice:   slices["発注単価"][i],
-			OrderCost:        slices["発注金額"][i],
-			OrderDate:        slices["発注日"][i],
-			RealDeliveryDate: slices["納入日"][i],
-		}
-		table = append(table, r)
+		return xl
+	}()
+	yl := len(table)
+	result := make(Table, xl)
+	for i := range result {
+		result[i] = make([]string, yl)
 	}
-	return
+	for i := 0; i < xl; i++ {
+		for j := 0; j < yl; j++ {
+			result[i][j] = table[j][i]
+		}
+	}
+	return result
 }
