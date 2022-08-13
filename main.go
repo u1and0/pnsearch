@@ -66,45 +66,6 @@ type (
 	}
 	// Column : toSlice()で変換されるqfの列
 	Column []string
-	// Row : Tableの一行
-	Row struct {
-		ReceivedOrderNo   int16  // 受注No
-		ProductNo         string // 製番
-		ProductNoName     string // 製番_品名
-		UnitNo            string // ユニットNo
-		Pid               string // 品番
-		Name              string // 品名
-		Type              string // 形式寸法
-		Unit              string // 単位
-		PurchaseQuantity  string // 仕入原価数量
-		PurchaseUnitPrice string // 仕入原価単価
-		PurchaseCost      string // 仕入原価金額
-		StockQuantity     string // 在庫払出数量
-		StockUnitPrice    string // 在庫払出単価
-		StockCost         string // 在庫払出金額
-		RecordDate        string // 登録日
-		OrderDate         string // 発注日
-		DeliveryDate      string // 納期
-		ReplyDeliveryDate string // 回答納期
-		RealDeliveryDate  string // 納入日
-		OrderDivision     string // 発注区分
-		Maker             string // メーカ
-		Material          string // 材質
-		Quantity          string // 員数
-		OrderQuantity     string // 必要数
-		OrderNum          string // 部品部品発注数
-		OrderRest         string // 発注残数
-		OrderUnitPrice    string // 発注単価
-		OrderCost         string // 発注金額
-		ProgressLevel     string // 進捗レベル
-		Process           string // 工程名
-		Vendor            string // 仕入先略称
-		OrderNo           string // オーダーNo
-		DeliveryPlace     string // 納入場所名
-		Misc              string // 部品備考
-		CostCode          string // 原価費目ｺｰﾄﾞ
-		CostName          string // 原価費目名
-	}
 
 	/* テーブル情報
 	検索、ソートのことは考えず
