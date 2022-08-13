@@ -186,7 +186,7 @@ func main() {
 		if debug {
 			log.Println(table)
 		}
-		c.HTML(http.StatusOK, "table.tmpl", gin.H{
+		c.HTML(http.StatusOK, "noui.tmpl", gin.H{
 			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table":  table,
 			"header": allData.ColumnNames(),
@@ -195,7 +195,7 @@ func main() {
 
 	s := r.Group("/search")
 	{
-		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "table.tmpl") })
+		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
 		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
 		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
 	}
@@ -258,9 +258,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
 		}
 		return
 	}
@@ -301,14 +301,19 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		msg := fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":    msg,
-			"table":  table,
 			"query":  q,
 			"header": qf.ColumnNames(),
+			"table":  table,
 		})
 	} else {
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
 		jsonObj := J(qf)
-		c.IndentedJSON(http.StatusOK, gin.H{"msg": msg, "length": l, "table": jsonObj, "query": q})
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"msg":    msg,
+			"query":  q,
+			"length": l,
+			"table":  jsonObj,
+		})
 	}
 }
 

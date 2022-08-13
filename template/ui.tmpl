@@ -1,11 +1,4 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <title>PN Search Web</title>
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-</head>
-
+{{template "header"}}
 <body>
   <form name="window" method="get" action="/search/ui">
     <!-- 検索キーワード入力 -->
@@ -25,50 +18,12 @@
     <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
     <input type="submit" id="submit" value="&#xf002;" class="fas">
     <!-- 表示設定 -->
-    <input type="checkbox" name="unitno" value="unitno" checked>
-    <input type="checkbox" name="pid" value="pid" checked>
+    <input type="checkbox" name="select" value="ユニットNo" checked>
+    <input type="checkbox" name="select" value="品番" checked>
+    <input type="checkbox" name="select" value="品名" checked>
+    <input type="checkbox" name="select" value="形式寸法" checked>
   </form>
   {{ .msg }}
-
-  <table class="table table-striped">
-    <thead>
-    <tr>
-      <th align="center"> 発注日 </th>
-      <th align="center"> 払出日 </th>
-      <th align="center"> 要求番号 </th>
-      <th align="center"> 品番 </th>
-      <th align="center"> 品名 </th>
-      <th align="center"> 形式寸法 </th>
-      <th align="center"> メーカ </th>
-      <th align="center"> 材質 </th>
-      <th align="center"> 必要数 </th>
-      <th align="center"> 発注単価 </th>
-      <th align="center"> 発注金額 </th>
-      <th align="center"> 工程名 </th>
-      <th align="center"> 納入場所 </th>
-    </tr>
-    </thead>
-
-    <tbody>
-    {{range .table}}
-    <tr>
-      <td>{{ .OrderDate }}</td>                <!-- 発注日<br>又は<br>発注指示日 -->
-      <td>{{ .RealDeliveryDate }}</td>         <!-- 納入完了日<br>又は<br>払出日 -->
-      <td>{{ .UnitNo }}</td>                   <!-- 要求番号 -->
-      <td>{{ .Pid }}</td>                      <!-- 品番 -->
-      <td>{{ .Name }}</td>                     <!-- 品名 -->
-      <td>{{ .Type }}</td>                     <!-- 形式寸法 -->
-      <td>{{ .Maker }}</td>                    <!-- メーカ -->
-      <td>{{ .Material }}</td>                 <!-- 材質 -->
-      <td>{{ .OrderQuantity }}</td>            <!-- 必要数 -->
-      <td>{{ .OrderUnitPrice }}</td>           <!-- 発注単価 -->
-      <td>{{ .OrderCost }}</td>                <!-- 発注金額 -->
-      <td>{{ .Process }}</td>                  <!-- 工程名 -->
-      <td>{{ .DeliveryPlace }}</td>            <!-- 納入場所 -->
-    </tr>
-    {{end}}
-    </tbody>
-  </table>
-
+  {{template "table" .}}
 </body>
 </html>
