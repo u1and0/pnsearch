@@ -116,7 +116,7 @@ type (
 		);
 	*/
 
-	// Query : URLクエリパラメータ
+	// Query : URLクエリパラメータ 検索キーワード
 	Query struct {
 		ProductNo string `form:"製番"`
 		UnitNo    string `form:"要求番号"`
@@ -127,6 +127,12 @@ type (
 		Vendor    string `form:"仕入先"`
 		SortOrder string `form:"sort"`
 		SortAsc   bool   `form:"asc"`
+		Check
+	}
+	// Check : URLクエリパラメータ 列選択
+	Check struct {
+		UnitNo bool `form:"unitno"`
+		Pid    bool `form:"pid"`
 	}
 )
 
@@ -181,8 +187,9 @@ func main() {
 			log.Println(table)
 		}
 		c.HTML(http.StatusOK, "table.tmpl", gin.H{
-			"msg":   fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
-			"table": table,
+			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
+			"table":  table,
+			"header": allData.ColumnNames(),
 		})
 	})
 
@@ -260,10 +267,13 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	log.Println(fmt.Sprintf("query: %#v", q))
 
 	// Search keyword by query parameter
-	filtered := q.search()
+	qf := q.search()
+	if debug {
+		log.Println("Filtered QFrame", qf)
+	}
 
 	// Search Failure
-	if filtered.Len() == 0 {
+	if qf.Len() == 0 {
 		msg := "検索結果がありません"
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
@@ -275,15 +285,29 @@ func ReturnTempl(c *gin.Context, templateName string) {
 
 	// Search Success
 	// Default descending order
-	sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
-	l := filtered.Len()
+	if q.SortOrder != "" {
+		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+		if debug {
+			log.Println("Sorted QFrame", qf)
+		}
+	}
+	qf = qf.Select("品名")
+	if debug {
+		log.Println("Selected QFrame", qf)
+	}
+	l := qf.Len()
 	if templateName != "" {
-		table := ToTable(sorted)
+		table := ToTable(qf)
 		msg := fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table, "query": q, "header": sorted.ColumnNames()})
+		c.HTML(http.StatusOK, templateName, gin.H{
+			"msg":    msg,
+			"table":  table,
+			"query":  q,
+			"header": qf.ColumnNames(),
+		})
 	} else {
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
-		jsonObj := J(sorted)
+		jsonObj := J(qf)
 		c.IndentedJSON(http.StatusOK, gin.H{"msg": msg, "length": l, "table": jsonObj, "query": q})
 	}
 }
@@ -296,7 +320,10 @@ func toString(ptr *string) string {
 }
 
 func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
-	view := qf.MustStringView(colName)
+	view, err := qf.StringView(colName)
+	if err != nil {
+		log.Printf("No col %s", colName)
+	}
 	for _, v := range view.Slice() {
 		stringSlice = append(stringSlice, toString(v))
 	}

@@ -8,6 +8,7 @@
 
 <body>
   <form name="window" method="get" action="/search/ui">
+    <!-- 検索キーワード入力 -->
     <label for="製番">製番</label>
     <input type="text" name="製番" value="{{ .query.ProductNo }}" size="10">
     <label for="要求番号">要求番号</label>
@@ -23,8 +24,12 @@
     <label for="仕入先">仕入先</label>
     <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
     <input type="submit" id="submit" value="&#xf002;" class="fas">
+    <!-- 表示設定 -->
+    <input type="checkbox" name="unitno" value="unitno" checked>
+    <input type="checkbox" name="pid" value="pid" checked>
   </form>
   {{ .msg }}
+
   <table class="table table-striped">
     <thead>
     <tr>
@@ -64,9 +69,6 @@
     {{end}}
     </tbody>
   </table>
-  <!-- <button type="button" class="create" onclick="location.href = '/api/v1/view/add/form'">作成する</button> -->
-  <!-- <button type="button" class="delete" onclick="if(window.confirm('{{ .id }}を削除します。この処理は元に戻せません。')) location.href = '/api/v1/view/{{ .id }}/delete'">削除する</button> -->
-  <!-- <button type="button" class="update" onclick="location.href = '/api/v1/view/{{ .id }}/update/form'">更新する</button> -->
 
 </body>
 </html>
