@@ -20,7 +20,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.2.0"
+	VERSION = "v0.2.0r"
 	// FILENAME = "./test/test50row.db"
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -193,6 +193,13 @@ func init() {
 		log.Fatal(err)
 	}
 	allData = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
+	typemap := allData.ColumnTypeMap()
+	// Drop NOT string type columnt
+	for k, v := range typemap {
+		if v != "string" {
+			allData = allData.Drop(k)
+		}
+	}
 	log.Println("qframe:", allData)
 }
 
@@ -289,6 +296,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 
 	// Search keyword by query parameter
 	filtered := q.search()
+
+	// Search Failure
 	if filtered.Len() == 0 {
 		msg := "検索結果がありません"
 		if templateName != "" {
@@ -299,14 +308,14 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		return
 	}
 
-	// Display result
+	// Search Success
 	// Default descending order
 	sorted := filtered.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
 	l := filtered.Len()
 	if templateName != "" {
 		table := ToTable(sorted)
 		msg := fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table, "query": q})
+		c.HTML(http.StatusOK, templateName, gin.H{"msg": msg, "table": table, "query": q, "header": sorted.ColumnNames()})
 	} else {
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
 		jsonObj := J(sorted)
@@ -359,13 +368,8 @@ func J(qf qframe.QFrame) (obj Object) {
 
 // ToTable : QFrame をTableへ変換
 func ToTable(qf qframe.QFrame) (table Table) {
-	typemap := qf.ColumnTypeMap()
 	// 順序を保持するためにforにColumnTypeMap()ではなくColumnNames()を使う
 	for _, colName := range qf.ColumnNames() {
-		// string column以外は処理しない
-		if typemap[colName] != "string" {
-			continue
-		}
 		column := toSlice(qf, colName)
 		table = append(table, column)
 	}

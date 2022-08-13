@@ -10,19 +10,7 @@
   <table class="table table-striped">
     <thead>
     <tr>
-      <th align="center"> 発注日 </th>
-      <th align="center"> 払出日 </th>
-      <th align="center"> 要求番号 </th>
-      <th align="center"> 品番 </th>
-      <th align="center"> 品名 </th>
-      <th align="center"> 形式寸法 </th>
-      <th align="center"> メーカ </th>
-      <th align="center"> 材質 </th>
-      <th align="center"> 必要数 </th>
-      <th align="center"> 発注単価 </th>
-      <th align="center"> 発注金額 </th>
-      <th align="center"> 工程名 </th>
-      <th align="center"> 納入場所 </th>
+      {{range .header}} <th align="center"> {{.}} </th> {{end}}
     </tr>
     </thead>
 
