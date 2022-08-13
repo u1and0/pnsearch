@@ -359,11 +359,14 @@ func J(qf qframe.QFrame) (obj Object) {
 
 // ToTable : QFrame をTableへ変換
 func ToTable(qf qframe.QFrame) (table Table) {
-	// columnMap := map[string]Column{}
-	for _, k := range []string{"ユニットNo", "品番", "品名", "形式寸法",
-		"メーカ", "材質", "工程名", "納入場所名", "発注単価", "発注金額",
-		"発注日", "納入日"} {
-		column := toSlice(qf, k)
+	typemap := qf.ColumnTypeMap()
+	// 順序を保持するためにforにColumnTypeMap()ではなくColumnNames()を使う
+	for _, colName := range qf.ColumnNames() {
+		// string column以外は処理しない
+		if typemap[colName] != "string" {
+			continue
+		}
+		column := toSlice(qf, colName)
 		table = append(table, column)
 	}
 	return table.T()
