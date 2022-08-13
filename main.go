@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -20,7 +22,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.2.0"
+	VERSION = "v0.2.0r"
 	// FILENAME = "./test/test50row.db"
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -44,6 +46,8 @@ var (
 	allData     qframe.QFrame
 	portnum     int
 	filename    string
+	//go:embed template/*
+	f embed.FS
 )
 
 type (
@@ -199,8 +203,8 @@ func init() {
 func main() {
 	// Router
 	r := gin.Default()
-	r.Static("/static", "./static")
-	r.LoadHTMLGlob("template/*.tmpl")
+	templ := template.Must(template.New("").ParseFS(f, "template/*.tmpl"))
+	r.SetHTMLTemplate(templ)
 
 	// API
 	r.GET("/", func(c *gin.Context) {
