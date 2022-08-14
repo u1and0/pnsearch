@@ -157,9 +157,7 @@ type (
 	// Labels : ラベル
 	Labels []Label
 	// Label : ラベル
-	Label struct {
-		Name, Value string
-	}
+	Label struct{ Name, Value string }
 )
 
 // Show version
@@ -324,6 +322,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	l := qf.Len()
 	if templateName != "" { // return HTML template
 		var (
+
+			// 順序保持のためにmapではなく[]structを使っている
 			labels = Labels{
 				// { 表示名, カラム名 }
 				Label{"受注No", "受注No"},
@@ -363,6 +363,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 				Label{"原価費目ｺｰﾄﾞ", "原価費目ｺｰﾄﾞ"},
 				Label{"原価費目名", "原価費目名"},
 			}
+
 			table = ToTable(qf)
 			msg   = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
 		)
