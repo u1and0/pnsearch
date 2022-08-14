@@ -56,18 +56,42 @@ type (
 	Table []Column
 	// Object : JSONオブジェクト返すための列試行の構造体
 	Object struct {
-		UnitNo           Column `json:"ユニットNo"`
-		Pid              Column `json:"品番"`
-		Name             Column `json:"品名"`
-		Type             Column `json:"形式寸法"`
-		Maker            Column `json:"メーカ"`
-		Material         Column `json:"材質"`
-		Process          Column `json:"工程名"`
-		DeliveryPlace    Column `json:"納入場所名"`
-		OrderUnitPrice   Column `json:"発注単価"`
-		OrderCost        Column `json:"発注金額"`
-		OrderDate        Column `json:"発注日"`
-		RealDeliveryDate Column `json:"納入日"`
+		ReceivedOrderNo   Column `json:"受注No"`
+		ProductNo         Column `json:"製番  "`
+		ProductNoName     Column `json:"製番_ 品名"`
+		UnitNo            Column `json:"ユニットNo"`
+		Pid               Column `json:"品番  "`
+		Name              Column `json:"品名  "`
+		Type              Column `json:"形式寸法"`
+		Unit              Column `json:"単位  "`
+		PurchaseQuantity  Column `json:"仕入原価数量"`
+		PurchaseUnitPrice Column `json:"仕入原価単価"`
+		PurchaseCost      Column `json:"仕入原価金額"`
+		StockQuantity     Column `json:"在庫払出数量"`
+		StockUnitPrice    Column `json:"在庫払出単価"`
+		StockCost         Column `json:"在庫払出金額"`
+		RecordDate        Column `json:"登録日"`
+		OrderDate         Column `json:"発注日"`
+		DeliveryDate      Column `json:"納期  "`
+		ReplyDeliveryDate Column `json:"回答納期"`
+		RealDeliveryDate  Column `json:"納入日"`
+		OrderDivision     Column `json:"発注区分"`
+		Maker             Column `json:"メーカ"`
+		Material          Column `json:"材質  "`
+		Quantity          Column `json:"員数  "`
+		OrderQuantity     Column `json:"必要数"`
+		OrderNum          Column `json:"部品部品発注数"`
+		OrderRest         Column `json:"発注残数"`
+		OrderUnitPrice    Column `json:"発注単価"`
+		OrderCost         Column `json:"発注金額"`
+		ProgressLevel     Column `json:"進捗レベル"`
+		Process           Column `json:"工程名"`
+		Vendor            Column `json:"仕入先略称"`
+		OrderNo           Column `json:"オーダーNo"`
+		DeliveryPlace     Column `json:"納入場所名"`
+		Misc              Column `json:"部品備考"`
+		CostCode          Column `json:"原価費目ｺｰﾄﾞ"`
+		CostName          Column `json:"原価費目名"`
 	}
 	// Column : toSlice()で変換されるqfの列
 	Column []string
@@ -351,7 +375,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		})
 	} else { // return JSON
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
-		jsonObj := J(qf)
+		jsonObj := ToObject(qf)
 		c.IndentedJSON(http.StatusOK, gin.H{
 			"msg":    msg,
 			"query":  q,
@@ -390,8 +414,8 @@ func ToRegex(s string) string {
 	return fmt.Sprintf(`(?i).*%s.*`, s)
 }
 
-// J : QFrame をJSONオブジェクトへ変換
-func J(qf qframe.QFrame) (obj Object) {
+// ToObject : QFrame をJSONオブジェクトへ変換
+func ToObject(qf qframe.QFrame) (obj Object) {
 	obj.UnitNo = toSlice(qf, "ユニットNo")
 	obj.Pid = toSlice(qf, "品番")
 	obj.Name = toSlice(qf, "品名")
