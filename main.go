@@ -301,13 +301,43 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if templateName != "" { // return HTML template
 		var (
 			labels = Labels{
+				// { 表示名, カラム名 }
+				Label{"受注No", "受注No"},
 				Label{"製番", "製番"},
+				Label{"製番_品名", "製番_品名"},
 				Label{"要求番号", "ユニットNo"},
 				Label{"品番", "品番"},
 				Label{"品名", "品名"},
 				Label{"形式寸法", "形式寸法"},
+				Label{"単位", "単位"},
+				Label{"仕入原価数量", "仕入原価数量"},
+				Label{"仕入原価単価", "仕入原価単価"},
+				Label{"仕入原価金額", "仕入原価金額"},
+				Label{"在庫払出数量", "在庫払出数量"},
+				Label{"在庫払出単価", "在庫払出単価"},
+				Label{"在庫払出金額", "在庫払出金額"},
+				Label{"登録日", "登録日"},
+				Label{"発注日", "発注日"},
+				Label{"納期", "納期"},
+				Label{"回答納期", "回答納期"},
+				Label{"納入日", "納入日"},
+				Label{"発注区分", "発注区分"},
 				Label{"メーカ", "メーカ"},
+				Label{"材質", "材質"},
+				Label{"員数", "員数"},
+				Label{"必要数", "必要数"},
+				Label{"部品発注数", "部品発注数"},
+				Label{"発注残数", "発注残数"},
+				Label{"発注単価", "発注単価"},
+				Label{"発注金額", "発注金額"},
+				Label{"進捗レベル", "進捗レベル"},
+				Label{"工程名", "工程名"},
 				Label{"仕入先", "仕入先略称"},
+				Label{"オーダーNo", "オーダーNo"},
+				Label{"納入場所名", "納入場所名"},
+				Label{"部品備考", "部品備考"},
+				Label{"原価費目ｺｰﾄﾞ", "原価費目ｺｰﾄﾞ"},
+				Label{"原価費目名", "原価費目名"},
 			}
 			table = ToTable(qf)
 			msg   = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
