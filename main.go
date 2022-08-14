@@ -150,7 +150,7 @@ type (
 		Type      string   `form:"形式寸法"`
 		Maker     string   `form:"メーカ"`
 		Vendor    string   `form:"仕入先"`
-		SortOrder string   `form:"sort"`
+		SortOrder string   `form:"orderby"`
 		SortAsc   bool     `form:"asc"`
 		Select    []string `form:"select"`
 	}

@@ -17,6 +17,34 @@
     <label for="仕入先">仕入先</label>
     <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
 
+    <label for="orderby-発注">発注</label>
+    <select id="発注" name="納入">
+      <option value="全て">全て</option>
+    </select>
+    <label for="納入">納入</label>
+    <select id="納入" name="納入">
+      <option value="全て">全て</option>
+      <option value="納入日 無し(未納入)">納入日 無し(未納入)</option>
+    </select>
+    <label for="orderby">並替</label>
+    <select id="orderby" name="orderby">
+      <option value="製番">製番</option>
+      <option value="登録日">登録日</option>
+      <option value="発注日">発注日</option>
+      <option value="納期">納期</option>
+      <option value="回答納期">回答納期</option>
+      <option value="納入日">納入日</option>
+    </select>
+    <select id="asc" name="asc">
+      <option value="true">昇順</option>
+      <option value="false">降順</option>
+    </select>
+    <label for="method">複数語句の組み合わせ</label>
+    <select id="method" name="method">
+      <option value="AND">AND検索</option>
+      <option value="OR">OR検索</option>
+    </select>
+
     <!-- 表示設定 -->
     {{$querySelect := .query.Select}}
     {{ range $label := .labels }}
