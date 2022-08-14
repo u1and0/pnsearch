@@ -16,14 +16,20 @@
     <input type="text" name="メーカ" value="{{ .query.Maker }}" size="10">
     <label for="仕入先">仕入先</label>
     <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
-    <input type="submit" id="submit" value="&#xf002;" class="fas">
+
     <!-- 表示設定 -->
-    <input type="checkbox" name="select" value="ユニットNo" checked>
-    <input type="checkbox" name="select" value="品番" checked>
-    <input type="checkbox" name="select" value="品名" checked>
-    <input type="checkbox" name="select" value="形式寸法" checked>
+    {{$querySelect := .query.Select}}
+    {{ range $label, $value := .labelMap }}
+      <input type="checkbox" name="select" id="select-{{$value}}" value="{{$value}}"
+      {{range $querySelect}}
+        {{if eq $value .}}checked{{end}}
+      {{end}}
+      >
+      <label for="select-{{$value}}">{{$label}}</label>
+    {{end}}
+
+    <!-- 検索ボタン -->
+    <input type="submit" id="submit" value="&#xf002;" class="fas">
   </form>
   {{ .msg }}
   {{template "table" .}}
-</body>
-</html>

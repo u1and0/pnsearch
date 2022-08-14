@@ -38,6 +38,7 @@ const (
 
 	// MAXROW : qfからTableへ変換する最大行数
 	MAXROW = 1000
+	// LABEL : 列選択チェックボックスラベル
 )
 
 var (
@@ -118,21 +119,16 @@ type (
 
 	// Query : URLクエリパラメータ 検索キーワード
 	Query struct {
-		ProductNo string `form:"製番"`
-		UnitNo    string `form:"要求番号"`
-		Pid       string `form:"品番"`
-		Name      string `form:"品名"`
-		Type      string `form:"形式寸法"`
-		Maker     string `form:"メーカ"`
-		Vendor    string `form:"仕入先"`
-		SortOrder string `form:"sort"`
-		SortAsc   bool   `form:"asc"`
-		Check
-	}
-	// Check : URLクエリパラメータ 列選択
-	Check struct {
-		UnitNo bool `form:"unitno"`
-		Pid    bool `form:"pid"`
+		ProductNo string   `form:"製番"`
+		UnitNo    string   `form:"要求番号"`
+		Pid       string   `form:"品番"`
+		Name      string   `form:"品名"`
+		Type      string   `form:"形式寸法"`
+		Maker     string   `form:"メーカ"`
+		Vendor    string   `form:"仕入先"`
+		SortOrder string   `form:"sort"`
+		SortAsc   bool     `form:"asc"`
+		Select    []string `form:"select"`
 	}
 )
 
@@ -171,7 +167,7 @@ func init() {
 			allData = allData.Drop(k)
 		}
 	}
-	log.Println("qframe:", allData)
+	log.Println("Loaded frame\n", allData)
 }
 
 func main() {
@@ -269,7 +265,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	// Search keyword by query parameter
 	qf := q.search()
 	if debug {
-		log.Println("Filtered QFrame", qf)
+		log.Println("Filtered QFrame\n", qf)
 	}
 
 	// Search Failure
@@ -288,24 +284,36 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if q.SortOrder != "" {
 		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
 		if debug {
-			log.Println("Sorted QFrame", qf)
+			log.Println("Sorted QFrame\n", qf)
 		}
 	}
-	qf = qf.Select("品名")
+	qf = qf.Select(q.Select...)
 	if debug {
-		log.Println("Selected QFrame", qf)
+		log.Println("Selected QFrame\n", qf)
 	}
 	l := qf.Len()
-	if templateName != "" {
-		table := ToTable(qf)
-		msg := fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
+	if templateName != "" { // return HTML template
+		var (
+			labelMap = map[string]string{
+				"製番":   "製番",
+				"要求番号": "ユニットNo",
+				"品番":   "品番",
+				"品名":   "品名",
+				"形式寸法": "形式寸法",
+				"メーカ":  "メーカ",
+				"仕入先":  "仕入先略称",
+			}
+			table = ToTable(qf)
+			msg   = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
+		)
 		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":    msg,
-			"query":  q,
-			"header": qf.ColumnNames(),
-			"table":  table,
+			"msg":      msg,
+			"query":    q,
+			"header":   qf.ColumnNames(),
+			"table":    table,
+			"labelMap": labelMap,
 		})
-	} else {
+	} else { // return JSON
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
 		jsonObj := J(qf)
 		c.IndentedJSON(http.StatusOK, gin.H{
