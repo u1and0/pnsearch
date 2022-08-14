@@ -1,17 +1,19 @@
 {{define "table"}}
-<table class="table table-striped">
-  <thead>
-  <tr>
-    {{range .header}} <th align="center"> {{.}} </th> {{end}}
-  </tr>
-  </thead>
+  <table class="table table-striped">
+    <thead>
+    <tr>
+      {{range .header}} <th align="center"> {{.}} </th> {{end}}
+    </tr>
+    </thead>
 
-  <tbody>
-  {{range .table}}
-  <tr>
-    {{range .}}<td>{{.}}</td>{{end}}
-  </tr>
-  {{end}}
-  </tbody>
-</table>
+    <tbody>
+    {{range .table}}
+    <tr>
+      {{range .}}<td>{{.}}</td>{{end}}
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</body>
+</html>
 {{end}}
