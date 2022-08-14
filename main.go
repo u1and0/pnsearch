@@ -130,6 +130,12 @@ type (
 		SortAsc   bool     `form:"asc"`
 		Select    []string `form:"select"`
 	}
+	// Labels : ラベル
+	Labels []Label
+	// Label : ラベル
+	Label struct {
+		Name, Value string
+	}
 )
 
 // Show version
@@ -294,24 +300,24 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	l := qf.Len()
 	if templateName != "" { // return HTML template
 		var (
-			labelMap = map[string]string{
-				"製番":   "製番",
-				"要求番号": "ユニットNo",
-				"品番":   "品番",
-				"品名":   "品名",
-				"形式寸法": "形式寸法",
-				"メーカ":  "メーカ",
-				"仕入先":  "仕入先略称",
+			labels = Labels{
+				Label{"製番", "製番"},
+				Label{"要求番号", "ユニットNo"},
+				Label{"品番", "品番"},
+				Label{"品名", "品名"},
+				Label{"形式寸法", "形式寸法"},
+				Label{"メーカ", "メーカ"},
+				Label{"仕入先", "仕入先略称"},
 			}
 			table = ToTable(qf)
 			msg   = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
 		)
 		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":      msg,
-			"query":    q,
-			"header":   qf.ColumnNames(),
-			"table":    table,
-			"labelMap": labelMap,
+			"msg":    msg,
+			"query":  q,
+			"header": qf.ColumnNames(),
+			"table":  table,
+			"labels": labels,
 		})
 	} else { // return JSON
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)

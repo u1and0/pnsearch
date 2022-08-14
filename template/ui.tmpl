@@ -19,13 +19,13 @@
 
     <!-- 表示設定 -->
     {{$querySelect := .query.Select}}
-    {{ range $label, $value := .labelMap }}
-      <input type="checkbox" name="select" id="select-{{$value}}" value="{{$value}}"
+    {{ range $label := .labels }}
+      <input type="checkbox" name="select" id="select-{{$label.Value}}" value="{{$label.Value}}"
       {{range $querySelect}}
-        {{if eq $value .}}checked{{end}}
+        {{if eq $label.Value .}}checked{{end}}
       {{end}}
       >
-      <label for="select-{{$value}}">{{$label}}</label>
+      <label for="select-{{$label.Value}}">{{$label.Name}}</label>
     {{end}}
 
     <!-- 検索ボタン -->
