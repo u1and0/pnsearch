@@ -286,7 +286,7 @@ func (q *Query) search() qframe.QFrame {
 // テンプレート名がない場合はJSONを返す。
 func ReturnTempl(c *gin.Context, templateName string) {
 	// Extract query
-	q := new(Query)
+	q := newQuery()
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
@@ -295,9 +295,6 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
 		}
 		return
-	}
-	if q.SortOrder == "" {
-		q.SortOrder = "発注日"
 	}
 	log.Println(fmt.Sprintf("query: %#v", q))
 
@@ -493,4 +490,15 @@ func (table Table) T() Table {
 		}
 	}
 	return result
+}
+
+func newQuery() *Query {
+	o := Option{
+		SortOrder: "発注日",
+	}
+	q := Query{
+		Option: o,
+		// Select: []string{"品番", "品名", "形式寸法"},
+	}
+	return &q
 }

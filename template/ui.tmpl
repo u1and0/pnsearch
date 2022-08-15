@@ -30,8 +30,11 @@
       </select>
       <label for="orderby">並替</label>
       <select id="orderby" name="orderby">
-        {{range $s := .sortable}}
-          <option value={{$s}}  >{{$s}}</option>
+        {{$s := .query.SortOrder}}
+        {{range .sortable}}
+          <option value={{.}}
+          {{if eq $s .}} selected {{end}}
+          >{{.}}</option>
         {{end}}
       </select>
       <select id="asc" name="asc">
