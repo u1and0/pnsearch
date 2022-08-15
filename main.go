@@ -143,21 +143,26 @@ type (
 
 	// Query : URLクエリパラメータ 検索キーワード
 	Query struct {
-		ProductNo string   `form:"製番"`
-		UnitNo    string   `form:"要求番号"`
-		Pid       string   `form:"品番"`
-		Name      string   `form:"品名"`
-		Type      string   `form:"形式寸法"`
-		Maker     string   `form:"メーカ"`
-		Vendor    string   `form:"仕入先"`
-		SortOrder string   `form:"orderby"`
-		SortAsc   bool     `form:"asc"`
-		Select    []string `form:"select"`
+		ProductNo string `form:"製番"`
+		UnitNo    string `form:"要求番号"`
+		Pid       string `form:"品番"`
+		Name      string `form:"品名"`
+		Type      string `form:"形式寸法"`
+		Maker     string `form:"メーカ"`
+		Vendor    string `form:"仕入先"`
+		Option
+		Select []string `form:"select"`
 	}
 	// Labels : ラベル
 	Labels []Label
 	// Label : ラベル
 	Label struct{ Name, Value string }
+	// Option : ソートオプション、AND検索OR検索切り替え
+	Option struct {
+		SortOrder string `form:"orderby"`
+		SortAsc   bool   `form:"asc"`
+		OR        bool   `form:"or"`
+	}
 )
 
 // Show version
@@ -271,6 +276,9 @@ func (q *Query) search() qframe.QFrame {
 			Column:     "仕入先略称",
 		},
 	}
+	if q.OR {
+		return allData.Filter(qframe.Or(filters...))
+	}
 	return allData.Filter(qframe.And(filters...))
 }
 
@@ -287,6 +295,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
 		}
 		return
+	}
+	if q.SortOrder == "" {
+		q.SortOrder = "発注日"
 	}
 	log.Println(fmt.Sprintf("query: %#v", q))
 
@@ -315,7 +326,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			log.Println("Sorted QFrame\n", qf)
 		}
 	}
-	qf = qf.Select(q.Select...)
+	if len(q.Select) != 0 {
+		qf = qf.Select(q.Select...)
+	}
 	if debug {
 		log.Println("Selected QFrame\n", qf)
 	}
@@ -364,15 +377,18 @@ func ReturnTempl(c *gin.Context, templateName string) {
 				Label{"原価費目名", "原価費目名"},
 			}
 
-			table = ToTable(qf)
-			msg   = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
+			sortable = []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"}
+			table    = ToTable(qf)
+			msg      = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
+			header   = headerMap(qf.ColumnNames())
 		)
 		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":    msg,
-			"query":  q,
-			"header": qf.ColumnNames(),
-			"table":  table,
-			"labels": labels,
+			"msg":      msg,
+			"query":    q,
+			"header":   header,
+			"table":    table,
+			"sortable": sortable,
+			"labels":   labels,
 		})
 	} else { // return JSON
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
@@ -384,6 +400,22 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			"table":  jsonObj,
 		})
 	}
+}
+
+// headerMap : SQLデータベースカラム名(データ名)をHTMLテーブルヘッダー名(表示名)へ変換する
+func headerMap(bfr []string) []string {
+	aft := make([]string, len(bfr))
+	maps := map[string]string{
+		"製番_品名":  "製番名称",
+		"ユニットNo": "要求番号",
+	}
+	for i, s := range bfr {
+		if m, ok := maps[s]; ok {
+			aft[i] = m
+		}
+		aft[i] = s
+	}
+	return aft
 }
 
 func toString(ptr *string) string {
