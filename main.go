@@ -234,47 +234,67 @@ func main() {
 }
 
 func (q *Query) search() qframe.QFrame {
-	res := map[string]*regexp.Regexp{
-		"製番":   regexp.MustCompile(ToRegex(q.ProductNo)),
-		"要求番号": regexp.MustCompile(ToRegex(q.UnitNo)),
-		"品番":   regexp.MustCompile(ToRegex(q.Pid)),
-		"品名":   regexp.MustCompile(ToRegex(q.Name)),
-		"形式寸法": regexp.MustCompile(ToRegex(q.Type)),
-		"メーカ":  regexp.MustCompile(ToRegex(q.Maker)),
-		"仕入先":  regexp.MustCompile(ToRegex(q.Vendor)),
-	}
-
 	// 原因不明だがfunctionや配列でregexp.MustCompile()してもうまく検索されないので
 	// スライスで冗長ながら書き下すしかない。
-	filters := []qframe.FilterClause{
-		qframe.Filter{
-			Comparator: func(p *string) bool { return res["製番"].MatchString(toString(p)) },
-			Column:     "製番",
-		},
-		qframe.Filter{
-			Comparator: func(p *string) bool { return res["要求番号"].MatchString(toString(p)) },
-			Column:     "ユニットNo",
-		},
-		qframe.Filter{
-			Comparator: func(p *string) bool { return res["品番"].MatchString(toString(p)) },
-			Column:     "品番",
-		},
-		qframe.Filter{
-			Comparator: func(p *string) bool { return res["品名"].MatchString(toString(p)) },
-			Column:     "品名",
-		},
-		qframe.Filter{
-			Comparator: func(p *string) bool { return res["形式寸法"].MatchString(toString(p)) },
-			Column:     "形式寸法",
-		},
-		qframe.Filter{
-			Comparator: func(p *string) bool { return res["メーカ"].MatchString(toString(p)) },
-			Column:     "メーカ",
-		},
-		qframe.Filter{
-			Comparator: func(p *string) bool { return res["仕入先"].MatchString(toString(p)) },
-			Column:     "仕入先略称",
-		},
+	filters := []qframe.FilterClause{}
+	// OR 検索にて、クエリが空文字の時
+	// すべての文字列 ".*.*" を検索してしまうのを防ぐため
+	// ifでfiltersにフィルターを追加するか条件節
+	if q.ProductNo != "" {
+		filters = append(filters, qframe.Filter{
+			Comparator: func(p *string) bool {
+				return regexp.MustCompile(ToRegex(q.ProductNo)).MatchString(toString(p))
+			},
+			Column: "製番",
+		})
+	}
+	if q.UnitNo != "" {
+		filters = append(filters, qframe.Filter{
+			Comparator: func(p *string) bool {
+				return regexp.MustCompile(ToRegex(q.UnitNo)).MatchString(toString(p))
+			},
+			Column: "ユニットNo",
+		})
+	}
+	if q.Pid != "" {
+		filters = append(filters, qframe.Filter{
+			Comparator: func(p *string) bool {
+				return regexp.MustCompile(ToRegex(q.Pid)).MatchString(toString(p))
+			},
+			Column: "品番",
+		})
+	}
+	if q.Name != "" {
+		filters = append(filters, qframe.Filter{
+			Comparator: func(p *string) bool {
+				return regexp.MustCompile(ToRegex(q.Name)).MatchString(toString(p))
+			},
+			Column: "品名",
+		})
+	}
+	if q.Type != "" {
+		filters = append(filters, qframe.Filter{
+			Comparator: func(p *string) bool {
+				return regexp.MustCompile(ToRegex(q.Type)).MatchString(toString(p))
+			},
+			Column: "形式寸法",
+		})
+	}
+	if q.Maker != "" {
+		filters = append(filters, qframe.Filter{
+			Comparator: func(p *string) bool {
+				return regexp.MustCompile(ToRegex(q.Maker)).MatchString(toString(p))
+			},
+			Column: "メーカ",
+		})
+	}
+	if q.Vendor != "" {
+		filters = append(filters, qframe.Filter{
+			Comparator: func(p *string) bool {
+				return regexp.MustCompile(ToRegex(q.Vendor)).MatchString(toString(p))
+			},
+			Column: "仕入先略称",
+		})
 	}
 	if q.OR {
 		return allData.Filter(qframe.Or(filters...))
