@@ -1,10 +1,11 @@
 {{template "header"}}
 <body>
   <form name="window" method="get" action="/search/ui">
-      <!-- 検索キーワード入力 -->
-    <table class="table table-striped">
+    <!-- 検索キーワード入力 -->
+    <!-- ここから先は初期で表示状態 -->
+    <table id="show-table" style="display:block;clear:both;">
       <thead>
-        <th colspan="6"> 検索条件(ここをクリックすると表示項目選択メニューに切換)</th>
+        <th colspan="6" onclick="toggleMenu()" > 検索条件(ここをクリックすると表示項目選択メニューに切換) </th>
       </thead>
       <tbody>
         <td rowspan="4">
@@ -80,7 +81,8 @@
     </table>
 
     <!-- ここから先は初期で隠し状態 -->
-    <div id="hidden-explain" style="display:none;clear:both;">
+    <div id="hidden-table" style="display:none;clear:both;">
+        <input type="button" value="検索条件(ここをクリックすると表示項目選択メニューに切換)" onclick="toggleMenu()" >
       <!-- 表示設定 -->
       {{$querySelect := .query.Select}}
       {{ range $i, $label := .labels }}
@@ -98,3 +100,13 @@
   </form>
   {{ .msg }}
   {{template "table" .}}
+  <script type="text/javascript">
+    function toggleMenu(){
+      const showt = document.getElementById("show-table").style;
+      showt.display=(showt.display=='none')?'block':'none';
+      const hiddt = document.getElementById("hidden-table").style;
+      hiddt.display=(hiddt.display=='none')?'block':'none';
+    }
+  </script>
+</body>
+</html>
