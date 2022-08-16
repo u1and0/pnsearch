@@ -1,64 +1,86 @@
 {{template "header"}}
 <body>
   <form name="window" method="get" action="/search/ui">
-    <table class="table table-striped">
       <!-- 検索キーワード入力 -->
-      <label for="製番">製番</label>
-      <input type="text" name="製番" value="{{ .query.ProductNo }}" size="10">
-      <label for="要求番号">要求番号</label>
-      <input type="text" name="要求番号" value="{{ .query.UnitNo }}" size="10">
-      <label for="品番">品番</label>
-      <input type="text" name="品番" value="{{ .query.Pid }}" size="10">
-      <label for="品名">品名</label>
-      <input type="text" name="品名" value="{{ .query.Name }}" size="10">
-      <label for="形式寸法">形式寸法</label>
-      <input type="text" name="形式寸法" value="{{ .query.Type }}" size="10">
-      <label for="メーカ">メーカ</label>
-      <input type="text" name="メーカ" value="{{ .query.Maker }}" size="10">
-      <label for="仕入先">仕入先</label>
-      <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
+    <table class="table table-striped">
+      <thead>
+        <th colspan="6"> 検索条件(ここをクリックすると表示項目選択メニューに切換)</th>
+      </thead>
+      <tbody>
+        <td rowspan="4">
+          <label for="製番">製番</label><br>
+          <label for="要求番号">要求番号</label><br>
+          <label for="品番">品番</label><br>
+          <label for="品名">品名</label>
+        </td>
+        <td rowspan="4">
+          <input type="text" name="製番" value="{{ .query.ProductNo }}" size="10"><br>
+          <input type="text" name="要求番号" value="{{ .query.UnitNo }}" size="10"><br>
+          <input type="text" name="品番" value="{{ .query.Pid }}" size="10"><br>
+          <input type="text" name="品名" value="{{ .query.Name }}" size="10">
+        </td>
 
-      <label for="orderby-発注">発注</label>
-      <select id="発注" name="納入">
-        <option value="全て">全て</option>
-        <option value="未入力">未入力</option>
-      </select>
-      <label for="納入">納入</label>
-      <select id="納入" name="納入">
-        <option value="全て">全て</option>
-        <option value="納入日 無し(未納入)">納入日 無し(未納入)</option>
-      </select>
-      <label for="orderby">並替</label>
-      <select id="orderby" name="orderby">
-        {{$s := .query.SortOrder}}
-        {{range .sortable}}
-          <option value={{.}}
-          {{if eq $s .}} selected {{end}}
-          >{{.}}</option>
-        {{end}}
-      </select>
-      <select id="asc" name="asc">
-        {{if .query.SortAsc}}
-          <option value="true" selected>昇順</option>
-          <option value="false">降順</option>
-        {{else}}
-          <option value="true">昇順</option>
-          <option value="false" selected>降順</option>
-        {{end}}
-      </select>
-      <label for="or">複数語句の組み合わせ</label>
-      <select id="or" name="or">
-        {{if .query.OR}}
-          <option value="false">AND検索</option>
-          <option value="true" selected>OR検索</option>
-        {{else}}
-          <option value="false" selected>AND検索</option>
-          <option value="true">OR検索</option>
-        {{end}}
-      </select>
+        <td rowspan="4">
+          <label for="形式寸法">形式寸法</label><br>
+          <label for="メーカ">メーカ</label><br>
+          <label for="仕入先">仕入先</label>
+        </td>
+        <td rowspan="4">
+          <input type="text" name="形式寸法" value="{{ .query.Type }}" size="10"><br>
+          <input type="text" name="メーカ" value="{{ .query.Maker }}" size="10"><br>
+          <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
+        </td>
+
+        <td rowspan="4">
+          <label for="orderby-発注">発注</label>
+          <select id="発注" name="納入">
+            <option value="全て">全て</option>
+            <option value="未入力">未入力</option>
+          </select><br>
+          <label for="納入">納入</label>
+          <select id="納入" name="納入">
+            <option value="全て">全て</option>
+            <option value="納入日 無し(未納入)">納入日 無し(未納入)</option>
+          </select><br>
+        </td>
+
+        <td rowspan="4">
+          <label for="orderby">並替</label>
+          <select id="orderby" name="orderby">
+            {{$s := .query.SortOrder}}
+            {{range .sortable}}
+              <option value={{.}}
+              {{if eq $s .}} selected {{end}}
+              >{{.}}</option>
+            {{end}}
+          </select><span>
+          <select id="asc" name="asc">
+            {{if .query.SortAsc}}
+              <option value="true" selected>昇順</option>
+              <option value="false">降順</option>
+            {{else}}
+              <option value="true">昇順</option>
+              <option value="false" selected>降順</option>
+            {{end}}
+          </select><br>
+          <label for="or">複数語句の組み合わせ</label>
+          <select id="or" name="or">
+            {{if .query.OR}}
+              <option value="false">AND検索</option>
+              <option value="true" selected>OR検索</option>
+            {{else}}
+              <option value="false" selected>AND検索</option>
+              <option value="true">OR検索</option>
+            {{end}}
+          </select><br>
+          <!-- 検索ボタン -->
+          <input type="submit" id="submit" value="検索" style="background-color:#168233">
+        </td>
+      <tbody>
     </table>
 
-    <table class="table table-striped">
+    <!-- ここから先は初期で隠し状態 -->
+    <div id="hidden-explain" style="display:none;clear:both;">
       <!-- 表示設定 -->
       {{$querySelect := .query.Select}}
       {{ range $i, $label := .labels }}
@@ -69,10 +91,10 @@
         >
         <label for="select-{{$label.Value}}">{{$i}}: {{$label.Name}}</label>
       {{end}}
-    </table>
 
-    <!-- 検索ボタン -->
-    <input type="submit" id="submit" value="&#xf002;" class="fas">
+      <!-- 検索ボタン -->
+      <input type="submit" id="submit" value="検索" style="background-color:#168233">
+    </div>
   </form>
   {{ .msg }}
   {{template "table" .}}
