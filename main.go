@@ -409,7 +409,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			sortable = []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"}
 			table    = ToTable(qf)
 			msg      = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-			header   = ConvertHeader(&convertMap, qf.ColumnNames(), true)
+			header   = ConvertHeader(&convertMap, qf.ColumnNames(), false)
 		)
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":      msg,
