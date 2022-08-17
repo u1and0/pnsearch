@@ -4,10 +4,13 @@
 
 ## ユーザー向けの説明
 
-テストページ: 上位1000件の表示
-	http://192.168.XXX.XXX:9000/
-
-XXX.XXX はFEKO PCのIPアドレス、ポート9000は暫定的に固定値として使用していきたいと考えております。
+| URL    | 説明 |
+|-----------------------------------------|-------------------------------------|
+| http://192.168.XXX.XXX:9000              | テストページトップ1000件を表示します。 |
+| http://192.168.XXX.XXX:9000/search       | 要求票の友用、テーブルのみの表示 |
+| http://192.168.XXX.XXX:9000/search/ui    | 検索UI付き、テーブル表示。普通のユーザーはこのページだけを使います。 |
+| http://192.168.XXX.XXX:9000/search/json　| JSON形式で表示、エクスポートできます。 |
+| http://192.168.XXX.XXX:9000/search/csv　 | *未実装* CSV形式表示、エクスポートできます。 |
 
 品番にAA を含む行
 	http://192.168.XXX.XXX:9000/search?品番=AA
@@ -51,19 +54,14 @@ HTMLテンプレート: 表示を変えられます。
 	...¥PNsearch¥template¥table.tmpl
 
 ### ビルド, インストール
-
-`make`コマンドを実行します。
-
-```bash
-$ cd PNSearch/src/pnsearch
-$ make install
-```
-
-バイナリ単体のみのコンパイル
+gccライブラリが必要です。
 
 ```bash
-$ cd PNSearch/src/pnsearch
-$ go build -o ../../pnsearch
+$ pacman -Syu mingw-w64-gcc mingw-w64-binutils gcc-multilib
 ```
 
-実行ファイルと同ディレクトリに`template/table.tmpl`が必要です。
+#### Linux
+`go build`
+
+#### Windows
+`GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -o pnsearch.exe`
