@@ -51,19 +51,14 @@ HTMLテンプレート: 表示を変えられます。
 	...¥PNsearch¥template¥table.tmpl
 
 ### ビルド, インストール
-
-`make`コマンドを実行します。
-
-```bash
-$ cd PNSearch/src/pnsearch
-$ make install
-```
-
-バイナリ単体のみのコンパイル
+gccライブラリが必要です。
 
 ```bash
-$ cd PNSearch/src/pnsearch
-$ go build -o ../../pnsearch
+$ pacman -Syu mingw-w64-gcc mingw-w64-binutils gcc-multilib
 ```
 
-実行ファイルと同ディレクトリに`template/table.tmpl`が必要です。
+#### Linux
+`go build`
+
+#### Windows
+`GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -o pnsearch.exe`
