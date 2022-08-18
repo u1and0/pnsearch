@@ -227,10 +227,11 @@ func main() {
 		if debug {
 			log.Println(table)
 		}
+		header := ConvertHeader(&convertMap, allData.ColumnNames(), false)
 		c.HTML(http.StatusOK, "noui.tmpl", gin.H{
 			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table":  table,
-			"header": allData.ColumnNames(),
+			"header": header,
 		})
 	})
 
@@ -433,20 +434,21 @@ func ReturnTempl(c *gin.Context, templateName string) {
 
 // headerMap : SQLデータベースカラム名(データ名)をHTMLテーブルヘッダー名(表示名)へ変換する
 func ConvertHeader(maps *bimap.BiMap[string, string], bfr []string, inverse bool) []string {
-	aft := make([]string, len(bfr))
-	if !inverse {
-		for i, k := range bfr {
-			if v, ok := maps.Get(k); ok {
-				aft[i] = v
-			}
-			aft[i] = k
+	var (
+		aft = make([]string, len(bfr))
+		ok  bool
+		v   string
+	)
+	for i, k := range bfr {
+		if !inverse {
+			v, ok = maps.Get(k)
+		} else {
+			v, ok = maps.GetInverse(k)
 		}
-	} else {
-		for i, v := range bfr {
-			if k, ok := maps.GetInverse(v); ok {
-				aft[i] = k
-			}
+		if ok {
 			aft[i] = v
+		} else {
+			aft[i] = k
 		}
 	}
 	return aft
