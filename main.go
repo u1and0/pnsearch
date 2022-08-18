@@ -178,6 +178,9 @@ func init() {
 		fmt.Println("pnsearch version", VERSION)
 		os.Exit(0) // Exit with version info
 	}
+	if _, err := os.Stat(filename); err != nil {
+		log.Fatal(err)
+	}
 	if !debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -196,7 +199,7 @@ func init() {
 	}
 	allData = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
 	typemap := allData.ColumnTypeMap()
-	// Drop NOT string type columnt
+	// Drop NOT string type columns
 	for k, v := range typemap {
 		if v != "string" {
 			allData = allData.Drop(k)
