@@ -59,13 +59,13 @@ type (
 	// Object : JSONオブジェクト返すための列試行の構造体
 	Object struct {
 		ReceivedOrderNo   Column `json:"受注No"`
-		ProductNo         Column `json:"製番  "`
-		ProductNoName     Column `json:"製番_ 品名"`
-		UnitNo            Column `json:"ユニットNo"`
-		Pid               Column `json:"品番  "`
-		Name              Column `json:"品名  "`
+		ProductNo         Column `json:"製番"`
+		ProductNoName     Column `json:"製番名称"`
+		UnitNo            Column `json:"要求番号"`
+		Pid               Column `json:"品番"`
+		Name              Column `json:"品名"`
 		Type              Column `json:"型式"`
-		Unit              Column `json:"単位  "`
+		Unit              Column `json:"単位"`
 		PurchaseQuantity  Column `json:"仕入原価数量"`
 		PurchaseUnitPrice Column `json:"仕入原価単価"`
 		PurchaseCost      Column `json:"仕入原価金額"`
@@ -74,13 +74,13 @@ type (
 		StockCost         Column `json:"在庫払出金額"`
 		RecordDate        Column `json:"登録日"`
 		OrderDate         Column `json:"発注日"`
-		DeliveryDate      Column `json:"納期  "`
+		DeliveryDate      Column `json:"納期"`
 		ReplyDeliveryDate Column `json:"回答納期"`
 		RealDeliveryDate  Column `json:"納入日"`
 		OrderDivision     Column `json:"発注区分"`
 		Maker             Column `json:"メーカ"`
-		Material          Column `json:"材質  "`
-		Quantity          Column `json:"員数  "`
+		Material          Column `json:"材質"`
+		Quantity          Column `json:"数量"`
 		OrderQuantity     Column `json:"必要数"`
 		OrderNum          Column `json:"部品部品発注数"`
 		OrderRest         Column `json:"発注残数"`
