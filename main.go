@@ -49,8 +49,8 @@ var (
 	portnum     int
 	filename    string
 	//go:embed template/*
-	f          embed.FS
-	convertMap bimap.BiMap[string, string]
+	f        embed.FS
+	spellMap bimap.BiMap[string, string]
 )
 
 type (
@@ -64,7 +64,7 @@ type (
 		UnitNo            Column `json:"ユニットNo"`
 		Pid               Column `json:"品番  "`
 		Name              Column `json:"品名  "`
-		Type              Column `json:"形式寸法"`
+		Type              Column `json:"型式"`
 		Unit              Column `json:"単位  "`
 		PurchaseQuantity  Column `json:"仕入原価数量"`
 		PurchaseUnitPrice Column `json:"仕入原価単価"`
@@ -149,7 +149,7 @@ type (
 		UnitNo    string `form:"要求番号"`
 		Pid       string `form:"品番"`
 		Name      string `form:"品名"`
-		Type      string `form:"形式寸法"`
+		Type      string `form:"型式"`
 		Maker     string `form:"メーカ"`
 		Vendor    string `form:"仕入先"`
 		Option
@@ -214,8 +214,11 @@ func init() {
 		// フィールド名: 表示名
 		"製番_品名":  "製番名称",
 		"ユニットNo": "要求番号",
+		"員数":     "数量",
+		"形式寸法":   "型式",
+		"材質":     "装置名",
 	}
-	convertMap = *bimap.NewBiMapFromMap(maps)
+	spellMap = *bimap.NewBiMapFromMap(maps)
 }
 
 func main() {
@@ -230,7 +233,7 @@ func main() {
 		if debug {
 			log.Println(table)
 		}
-		header := ConvertHeader(&convertMap, allData.ColumnNames(), false)
+		header := ConvertHeader(&spellMap, allData.ColumnNames(), false)
 		c.HTML(http.StatusOK, "noui.tmpl", gin.H{
 			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table":  table,
@@ -413,7 +416,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			sortable = []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"}
 			table    = ToTable(qf)
 			msg      = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-			header   = ConvertHeader(&convertMap, qf.ColumnNames(), false)
+			header   = ConvertHeader(&spellMap, qf.ColumnNames(), false)
 		)
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":      msg,
