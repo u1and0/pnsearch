@@ -48,8 +48,7 @@ var (
 	portnum     int
 	filename    string
 	//go:embed template/*
-	f        embed.FS
-	spellMap map[string]string
+	f embed.FS
 )
 
 type (
@@ -178,7 +177,7 @@ func init() {
 		os.Exit(0) // Exit with version info
 	}
 	if _, err := os.Stat(filename); err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	if !debug {
 		gin.SetMode(gin.ReleaseMode)
@@ -190,11 +189,11 @@ func init() {
 func init() {
 	db, err := sql.Open("sqlite3", filename)
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	allData = qframe.ReadSQL(tx, qsql.Query(SQLQ), qsql.SQLite())
 	typemap := allData.ColumnTypeMap()
@@ -205,18 +204,6 @@ func init() {
 		}
 	}
 	log.Println("Loaded frame\n", allData)
-}
-
-// 変換BiMapの作成
-func init() {
-	spellMap = map[string]string{
-		// フィールド名: 表示名
-		"製番_品名":  "製番名称",
-		"ユニットNo": "要求番号",
-		"員数":     "数量",
-		"形式寸法":   "型式",
-		"材質":     "装置名",
-	}
 }
 
 func main() {
@@ -231,7 +218,7 @@ func main() {
 		if debug {
 			log.Println(table)
 		}
-		header := ConvertHeader(spellMap, allData.ColumnNames())
+		header := ConvertHeader(allData.ColumnNames())
 		c.HTML(http.StatusOK, "noui.tmpl", gin.H{
 			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table":  table,
@@ -372,7 +359,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		}
 	}
 	if len(q.Select) != 0 {
-		qf = qf.Select(q.Select...)
+		cols := ConvertHeader(q.Select)
+		qf = qf.Select(cols...)
 	}
 	if debug {
 		log.Println("Selected QFrame\n", qf)
@@ -425,7 +413,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			sortable = []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"}
 			table    = ToTable(qf)
 			msg      = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-			header   = ConvertHeader(spellMap, qf.ColumnNames())
+			header   = ConvertHeader(qf.ColumnNames())
 		)
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":      msg,
@@ -448,10 +436,18 @@ func ReturnTempl(c *gin.Context, templateName string) {
 }
 
 // headerMap : SQLデータベースカラム名(データ名)をHTMLテーブルヘッダー名(表示名)へ変換する
-func ConvertHeader(maps map[string]string, bfr []string) []string {
+func ConvertHeader(bfr []string) []string {
+	spellMap := map[string]string{
+		// フィールド名: 表示名
+		"製番_品名":  "製番名称",
+		"ユニットNo": "要求番号",
+		"員数":     "数量",
+		"形式寸法":   "型式",
+		"材質":     "装置名",
+	}
 	var aft = make([]string, len(bfr))
 	for i, k := range bfr {
-		if v, ok := maps[k]; ok {
+		if v, ok := spellMap[k]; ok {
 			aft[i] = v
 		} else {
 			aft[i] = k
