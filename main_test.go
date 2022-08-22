@@ -2,9 +2,8 @@ package main
 
 import (
 	"reflect"
+	"strings"
 	"testing"
-
-	"github.com/vishalkuo/bimap"
 )
 
 /*
@@ -62,19 +61,29 @@ func TestToRagex(t *testing.T) {
 }
 
 func TestConvertHeader(t *testing.T) {
-	mp := map[string]string{"a": "1", "b": "2", "c": "3"}
-	convertMap := bimap.NewBiMapFromMap(mp)
-
-	testSlice := []string{"a", "b", "c", "d"}
-	expect := []string{"1", "2", "3", "d"}
-	actual := ConvertHeader(convertMap, testSlice, true)
-	if reflect.DeepEqual(expect, actual) {
-		t.Fatalf("got: %v want: %v\n", actual, expect)
+	testSlice := []string{"品名", "ユニットNo"}
+	expect := []string{"品名", "要求番号"}
+	actual := ConvertHeader(testSlice)
+	for i, e := range expect {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v\n", actual, expect)
+		}
 	}
+}
 
-	testSlice = []string{"1", "2", "3", "4"}
-	expect = []string{"a", "b", "c", "4"}
-	actual = ConvertHeader(convertMap, testSlice, false)
+func TestLabelMaker(t *testing.T) {
+	testword := `
+	labela
+	labelb
+	ユニットNo
+	`
+	aliases := strings.Split(testword, "\n\t")
+	actual := LabelMaker(aliases)
+	expect := Labels{
+		Label{"labela", "labela"},
+		Label{"labelb", "labelb"},
+		Label{"ユニットNo", "要求番号"},
+	}
 	if reflect.DeepEqual(expect, actual) {
 		t.Fatalf("got: %v want: %v\n", actual, expect)
 	}
