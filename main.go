@@ -23,7 +23,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.0"
+	VERSION = "v0.3.0r"
 	// FILENAME = "./test/test50row.db"
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -331,11 +331,22 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
 		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
 		return
 	}
 	log.Printf("query: %#v", q)
+
+	// Empty query
+	if reflect.DeepEqual(q, newQuery()) {
+		msg := "検索キーワードがありません"
+		if templateName != "" {
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
+		}
+		return
+	}
 
 	// Search keyword by query parameter
 	qf := q.search()
