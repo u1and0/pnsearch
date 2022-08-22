@@ -18,7 +18,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tobgu/qframe"
 	qsql "github.com/tobgu/qframe/config/sql"
-	"github.com/vishalkuo/bimap"
 )
 
 const (
@@ -50,7 +49,7 @@ var (
 	filename    string
 	//go:embed template/*
 	f        embed.FS
-	spellMap bimap.BiMap[string, string]
+	spellMap map[string]string
 )
 
 type (
@@ -210,7 +209,7 @@ func init() {
 
 // 変換BiMapの作成
 func init() {
-	maps := map[string]string{
+	spellMap = map[string]string{
 		// フィールド名: 表示名
 		"製番_品名":  "製番名称",
 		"ユニットNo": "要求番号",
@@ -218,7 +217,6 @@ func init() {
 		"形式寸法":   "型式",
 		"材質":     "装置名",
 	}
-	spellMap = *bimap.NewBiMapFromMap(maps)
 }
 
 func main() {
@@ -233,7 +231,7 @@ func main() {
 		if debug {
 			log.Println(table)
 		}
-		header := ConvertHeader(&spellMap, allData.ColumnNames(), false)
+		header := ConvertHeader(spellMap, allData.ColumnNames())
 		c.HTML(http.StatusOK, "noui.tmpl", gin.H{
 			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table":  table,
@@ -427,7 +425,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			sortable = []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"}
 			table    = ToTable(qf)
 			msg      = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-			header   = ConvertHeader(&spellMap, qf.ColumnNames(), false)
+			header   = ConvertHeader(spellMap, qf.ColumnNames())
 		)
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":      msg,
@@ -450,19 +448,10 @@ func ReturnTempl(c *gin.Context, templateName string) {
 }
 
 // headerMap : SQLデータベースカラム名(データ名)をHTMLテーブルヘッダー名(表示名)へ変換する
-func ConvertHeader(maps *bimap.BiMap[string, string], bfr []string, inverse bool) []string {
-	var (
-		aft = make([]string, len(bfr))
-		ok  bool
-		v   string
-	)
+func ConvertHeader(maps map[string]string, bfr []string) []string {
+	var aft = make([]string, len(bfr))
 	for i, k := range bfr {
-		if !inverse {
-			v, ok = maps.Get(k)
-		} else {
-			v, ok = maps.GetInverse(k)
-		}
-		if ok {
+		if v, ok := maps[k]; ok {
 			aft[i] = v
 		} else {
 			aft[i] = k
