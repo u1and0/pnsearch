@@ -2,7 +2,6 @@ package main
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -72,12 +71,7 @@ func TestConvertHeader(t *testing.T) {
 }
 
 func TestLabelMaker(t *testing.T) {
-	testword := `
-	labela
-	labelb
-	ユニットNo
-	`
-	aliases := strings.Split(testword, "\n\t")
+	aliases := []string{"labela", "labelb", "ユニットNo"}
 	actual := LabelMaker(aliases)
 	expect := Labels{
 		Label{"labela", "labela"},

@@ -375,10 +375,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	l := qf.Len()
 	if templateName != "" { // return HTML template
 		var (
-
 			// 順序保持のためにmapではなく[]structを使っている
-			aliases  = strings.Split(LABEL, "\n\t")
-			labels   = LabelMaker(aliases)
+			labels   = LabelMaker(Aliases)
 			sortable = []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"}
 			table    = ToTable(qf)
 			msg      = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
@@ -502,45 +500,45 @@ func (table Table) T() Table {
 	return result
 }
 
-// LABEL : 列選択チェックボックスラベル
-const LABEL = `
-受注No
-製番
-製番_品名
-要求番号
-品番
-品名
-形式寸法
-単位
-仕入原価数量
-仕入原価単価
-仕入原価金額
-在庫払出数量
-在庫払出単価
-在庫払出金額
-登録日
-発注日
-納期
-回答納期
-納入日
-発注区分
-メーカ
-材質
-員数
-必要数
-部品発注数
-発注残数
-発注単価
-発注金額
-進捗レベル
-工程名
-仕入先
-オーダーNo
-納入場所名
-部品備考
-原価費目ｺｰﾄﾞ
-原価費目名
-`
+// Aliases : 列選択チェックボックスラベル
+var Aliases = []string{
+	"受注No",
+	"製番",
+	"製番_品名",
+	"要求番号",
+	"品番",
+	"品名",
+	"形式寸法",
+	"単位",
+	"仕入原価数量",
+	"仕入原価単価",
+	"仕入原価金額",
+	"在庫払出数量",
+	"在庫払出単価",
+	"在庫払出金額",
+	"登録日",
+	"発注日",
+	"納期",
+	"回答納期",
+	"納入日",
+	"発注区分",
+	"メーカ",
+	"材質",
+	"員数",
+	"必要数",
+	"部品発注数",
+	"発注残数",
+	"発注単価",
+	"発注金額",
+	"進捗レベル",
+	"工程名",
+	"仕入先",
+	"オーダーNo",
+	"納入場所名",
+	"部品備考",
+	"原価費目ｺｰﾄﾞ",
+	"原価費目名",
+}
 
 type (
 	// Labels : ラベル
