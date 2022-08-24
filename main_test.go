@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -78,7 +77,9 @@ func TestLabelMaker(t *testing.T) {
 		Label{"labelb", "labelb"},
 		Label{"ユニットNo", "要求番号"},
 	}
-	if reflect.DeepEqual(expect, actual) {
-		t.Fatalf("got: %v want: %v\n", actual, expect)
+	for i, e := range expect {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v\n", actual, expect)
+		}
 	}
 }

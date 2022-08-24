@@ -41,111 +41,15 @@ const (
 )
 
 var (
+	/*コマンドフラグ*/
 	showVersion bool
 	debug       bool
 	allData     qframe.QFrame
 	portnum     int
 	filename    string
+	/*template以下の全てのファイルをバイナリへ取り込み*/
 	//go:embed template/*
 	f embed.FS
-)
-
-type (
-	// Table : HTMLへ書き込むための行指向の構造体
-	Table []Column
-	// Object : JSONオブジェクト返すための列試行の構造体
-	Object struct {
-		ReceivedOrderNo   Column `json:"受注No"`
-		ProductNo         Column `json:"製番"`
-		ProductNoName     Column `json:"製番名称"`
-		UnitNo            Column `json:"要求番号"`
-		Pid               Column `json:"品番"`
-		Name              Column `json:"品名"`
-		Type              Column `json:"型式"`
-		Unit              Column `json:"単位"`
-		PurchaseQuantity  Column `json:"仕入原価数量"`
-		PurchaseUnitPrice Column `json:"仕入原価単価"`
-		PurchaseCost      Column `json:"仕入原価金額"`
-		StockQuantity     Column `json:"在庫払出数量"`
-		StockUnitPrice    Column `json:"在庫払出単価"`
-		StockCost         Column `json:"在庫払出金額"`
-		RecordDate        Column `json:"登録日"`
-		OrderDate         Column `json:"発注日"`
-		DeliveryDate      Column `json:"納期"`
-		ReplyDeliveryDate Column `json:"回答納期"`
-		RealDeliveryDate  Column `json:"納入日"`
-		OrderDivision     Column `json:"発注区分"`
-		Maker             Column `json:"メーカ"`
-		Material          Column `json:"材質"`
-		Quantity          Column `json:"数量"`
-		OrderQuantity     Column `json:"必要数"`
-		OrderNum          Column `json:"部品部品発注数"`
-		OrderRest         Column `json:"発注残数"`
-		OrderUnitPrice    Column `json:"発注単価"`
-		OrderCost         Column `json:"発注金額"`
-		ProgressLevel     Column `json:"進捗レベル"`
-		Process           Column `json:"工程名"`
-		Vendor            Column `json:"仕入先略称"`
-		OrderNo           Column `json:"オーダーNo"`
-		DeliveryPlace     Column `json:"納入場所名"`
-		Misc              Column `json:"部品備考"`
-		CostCode          Column `json:"原価費目ｺｰﾄﾞ"`
-		CostName          Column `json:"原価費目名"`
-	}
-	// Column : toSlice()で変換されるqfの列
-	Column []string
-
-	/* テーブル情報
-	検索、ソートのことは考えず
-	表示とコーディングしやすさのことを考慮して、
-	すべてTEXT型に変更した。
-		CREATE TABLE order2 (
-		"index" INTEGER,
-		  "受注No" TEXT,
-		  "製番" TEXT,
-		  "製番_品名" TEXT,
-		  "ユニットNo" TEXT,
-		  "品番" TEXT,
-		  "品名" TEXT,
-		  "形式寸法" TEXT,
-		  "単位" TEXT,
-		  "仕入原価数量" TEXT,
-		  "仕入原価単価" TEXT,
-		  "仕入原価金額" TEXT,
-		  "在庫払出数量" TEXT,
-		  "在庫払出単価" TEXT,
-		  "在庫払出金額" TEXT,
-		  "登録日" TEXT,
-		  "発注日" TEXT,
-		  "納期" TEXT,
-		  "回答納期" TEXT,
-		  "納入日" TEXT,
-		  "発注区分" TEXT,
-		  "メーカ" TEXT,
-		  "材質" TEXT,
-		  "員数" TEXT,
-		  "必要数" TEXT,
-		  "部品発注数" TEXT,
-		  "発注残数" TEXT,
-		  "発注単価" TEXT,
-		  "発注金額" TEXT,
-		  "進捗レベル" TEXT,
-		  "工程名" TEXT,
-		  "仕入先略称" TEXT,
-		  "オーダーNo" TEXT,
-		  "納入場所名" TEXT,
-		  "部品備考" TEXT,
-		  "原価費目ｺｰﾄﾞ" TEXT,
-		  "原価費目名" TEXT
-		);
-	*/
-
-	// Option : ソートオプション、AND検索OR検索切り替え
-	Option struct {
-		SortOrder string `form:"orderby"`
-		SortAsc   bool   `form:"asc"`
-		OR        bool   `form:"or"`
-	}
 )
 
 // Show version
@@ -201,7 +105,7 @@ func main() {
 		if debug {
 			log.Println(table)
 		}
-		header := ConvertHeader(allData.ColumnNames())
+		header := FieldNameToAlias(allData.ColumnNames())
 		c.HTML(http.StatusOK, "noui.tmpl", gin.H{
 			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table":  table,
@@ -220,18 +124,111 @@ func main() {
 	r.Run(port)
 }
 
-// Query : URLクエリパラメータ 検索キーワード
-type Query struct {
-	ProductNo string `form:"製番"`
-	UnitNo    string `form:"要求番号"`
-	Pid       string `form:"品番"`
-	Name      string `form:"品名"`
-	Type      string `form:"型式"`
-	Maker     string `form:"メーカ"`
-	Vendor    string `form:"仕入先"`
-	Option
-	Select []string `form:"select"`
+// ReturnTempl : HTMLテンプレートを返す。
+// テンプレート名がない場合はJSONを返す。
+func ReturnTempl(c *gin.Context, templateName string) {
+	// Extract query
+	q := newQuery()
+	if err := c.ShouldBind(q); err != nil {
+		msg := fmt.Sprintf("%#v Bad Query", q)
+		if templateName != "" {
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
+		}
+		return
+	}
+	log.Printf("query: %#v", q)
+
+	// Empty query
+	if reflect.DeepEqual(q, newQuery()) {
+		msg := "検索キーワードがありません"
+		if templateName != "" {
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
+		}
+		return
+	}
+
+	// Search keyword by query parameter
+	qf := q.search()
+	if debug {
+		log.Println("Filtered QFrame\n", qf)
+	}
+
+	// Search Failure
+	if qf.Len() == 0 {
+		msg := "検索結果がありません"
+		if templateName != "" {
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
+		}
+		return
+	}
+
+	// Search Success
+	// Default descending order
+	if q.SortOrder != "" {
+		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+		if debug {
+			log.Println("Sorted QFrame\n", qf)
+		}
+	}
+	if len(q.Select) != 0 {
+		// Alias to Name
+		cols := FieldNameToAlias(q.Select)
+		qf = qf.Select(cols...)
+	}
+	if debug {
+		log.Println("Selected QFrame\n", qf)
+	}
+	l := qf.Len()
+	if templateName != "" { // return HTML template
+		table := ToTable(qf)
+		c.HTML(http.StatusOK, templateName, gin.H{
+			"msg":      fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
+			"query":    q,
+			"header":   FieldNameToAlias(qf.ColumnNames()),
+			"table":    table,
+			"sortable": []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"},
+			"labels":   LabelMaker(allData.ColumnNames()),
+		})
+	} else { // return JSON
+		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
+		jsonObj := ToObject(qf)
+		c.IndentedJSON(http.StatusOK, gin.H{
+			"msg":    msg,
+			"query":  q,
+			"length": l,
+			"table":  jsonObj,
+		})
+	}
 }
+
+/*クエリパラメータ関連*/
+
+type (
+	// Query : URLクエリパラメータ 検索キーワード
+	Query struct {
+		ProductNo string `form:"製番"`
+		UnitNo    string `form:"要求番号"`
+		Pid       string `form:"品番"`
+		Name      string `form:"品名"`
+		Type      string `form:"型式"`
+		Maker     string `form:"メーカ"`
+		Vendor    string `form:"仕入先"`
+		Option
+		Select []string `form:"select"`
+	}
+	// Option : ソートオプション、AND検索OR検索切り替え
+	Option struct {
+		SortOrder string `form:"orderby"`
+		SortAsc   bool   `form:"asc"`
+		OR        bool   `form:"or"`
+	}
+)
 
 func newQuery() *Query {
 	o := Option{
@@ -313,97 +310,19 @@ func (q *Query) search() qframe.QFrame {
 	return allData.Filter(qframe.And(filters...))
 }
 
-// ReturnTempl : HTMLテンプレートを返す。
-// テンプレート名がない場合はJSONを返す。
-func ReturnTempl(c *gin.Context, templateName string) {
-	// Extract query
-	q := newQuery()
-	if err := c.ShouldBind(q); err != nil {
-		msg := fmt.Sprintf("%#v Bad Query", q)
-		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
-		}
-		return
-	}
-	log.Printf("query: %#v", q)
-
-	// Empty query
-	if reflect.DeepEqual(q, newQuery()) {
-		msg := "検索キーワードがありません"
-		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
-		}
-		return
-	}
-
-	// Search keyword by query parameter
-	qf := q.search()
-	if debug {
-		log.Println("Filtered QFrame\n", qf)
-	}
-
-	// Search Failure
-	if qf.Len() == 0 {
-		msg := "検索結果がありません"
-		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
-		}
-		return
-	}
-
-	// Search Success
-	// Default descending order
-	if q.SortOrder != "" {
-		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
-		if debug {
-			log.Println("Sorted QFrame\n", qf)
-		}
-	}
-	if len(q.Select) != 0 {
-		cols := ConvertHeader(q.Select)
-		qf = qf.Select(cols...)
-	}
-	if debug {
-		log.Println("Selected QFrame\n", qf)
-	}
-	l := qf.Len()
-	if templateName != "" { // return HTML template
-		var (
-			// 順序保持のためにmapではなく[]structを使っている
-			labels   = LabelMaker(Aliases)
-			sortable = []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"}
-			table    = ToTable(qf)
-			msg      = fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table))
-			header   = ConvertHeader(qf.ColumnNames())
-		)
-		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":      msg,
-			"query":    q,
-			"header":   header,
-			"table":    table,
-			"sortable": sortable,
-			"labels":   labels,
-		})
-	} else { // return JSON
-		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
-		jsonObj := ToObject(qf)
-		c.IndentedJSON(http.StatusOK, gin.H{
-			"msg":    msg,
-			"query":  q,
-			"length": l,
-			"table":  jsonObj,
-		})
-	}
+// ToRegex : スペース区切りを正規表現.*で埋める
+// (?i) for ignore case
+// .* for any string
+func ToRegex(s string) string {
+	s = strings.ReplaceAll(s, "　", " ")       // 全角半角変換
+	s = strings.ReplaceAll(s, "\t", " ")      // タブ文字削除
+	s = strings.TrimSpace(s)                  // 左右の空白削除
+	s = strings.Join(strings.Fields(s), `.*`) // スペースを.*に変換
+	return fmt.Sprintf(`(?i).*%s.*`, s)
 }
 
-// headerMap : SQLデータベースカラム名(データ名)をHTMLテーブルヘッダー名(表示名)へ変換する
-func ConvertHeader(bfr []string) []string {
+// FieldNameToAlias : SQLデータベースカラム名(データ名)をHTMLテーブルヘッダー名(表示名)へ変換する
+func FieldNameToAlias(bfr []string) []string {
 	spellMap := map[string]string{
 		// フィールド名: 表示名
 		"製番_品名":  "製番名称",
@@ -423,34 +342,97 @@ func ConvertHeader(bfr []string) []string {
 	return aft
 }
 
-func toString(ptr *string) string {
-	if (ptr == nil) || reflect.ValueOf(ptr).IsNil() {
-		return ""
-	}
-	return *ptr
-}
+/*Table, JSONオブジェクトAPI関連*/
+type (
+	// Table : HTMLへ書き込むための行指向の構造体
+	Table []Column
+	// Column : toSlice()で変換されるqfの列
+	Column []string
 
-func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
-	view, err := qf.StringView(colName)
-	if err != nil {
-		log.Printf("No col %s", colName)
+	/* テーブル情報
+	検索、ソートのことは考えず
+	表示とコーディングしやすさのことを考慮して、
+	すべてTEXT型に変更した。
+		CREATE TABLE order2 (
+		"index" INTEGER,
+		  "受注No" TEXT,
+		  "製番" TEXT,
+		  "製番_品名" TEXT,
+		  "ユニットNo" TEXT,
+		  "品番" TEXT,
+		  "品名" TEXT,
+		  "形式寸法" TEXT,
+		  "単位" TEXT,
+		  "仕入原価数量" TEXT,
+		  "仕入原価単価" TEXT,
+		  "仕入原価金額" TEXT,
+		  "在庫払出数量" TEXT,
+		  "在庫払出単価" TEXT,
+		  "在庫払出金額" TEXT,
+		  "登録日" TEXT,
+		  "発注日" TEXT,
+		  "納期" TEXT,
+		  "回答納期" TEXT,
+		  "納入日" TEXT,
+		  "発注区分" TEXT,
+		  "メーカ" TEXT,
+		  "材質" TEXT,
+		  "員数" TEXT,
+		  "必要数" TEXT,
+		  "部品発注数" TEXT,
+		  "発注残数" TEXT,
+		  "発注単価" TEXT,
+		  "発注金額" TEXT,
+		  "進捗レベル" TEXT,
+		  "工程名" TEXT,
+		  "仕入先略称" TEXT,
+		  "オーダーNo" TEXT,
+		  "納入場所名" TEXT,
+		  "部品備考" TEXT,
+		  "原価費目ｺｰﾄﾞ" TEXT,
+		  "原価費目名" TEXT
+		);
+	*/
+	// Object : JSONオブジェクト返すための列試行の構造体
+	Object struct {
+		ReceivedOrderNo   Column `json:"受注No"`
+		ProductNo         Column `json:"製番"`
+		ProductNoName     Column `json:"製番名称"`
+		UnitNo            Column `json:"要求番号"`
+		Pid               Column `json:"品番"`
+		Name              Column `json:"品名"`
+		Type              Column `json:"型式"`
+		Unit              Column `json:"単位"`
+		PurchaseQuantity  Column `json:"仕入原価数量"`
+		PurchaseUnitPrice Column `json:"仕入原価単価"`
+		PurchaseCost      Column `json:"仕入原価金額"`
+		StockQuantity     Column `json:"在庫払出数量"`
+		StockUnitPrice    Column `json:"在庫払出単価"`
+		StockCost         Column `json:"在庫払出金額"`
+		RecordDate        Column `json:"登録日"`
+		OrderDate         Column `json:"発注日"`
+		DeliveryDate      Column `json:"納期"`
+		ReplyDeliveryDate Column `json:"回答納期"`
+		RealDeliveryDate  Column `json:"納入日"`
+		OrderDivision     Column `json:"発注区分"`
+		Maker             Column `json:"メーカ"`
+		Material          Column `json:"材質"`
+		Quantity          Column `json:"数量"`
+		OrderQuantity     Column `json:"必要数"`
+		OrderNum          Column `json:"部品部品発注数"`
+		OrderRest         Column `json:"発注残数"`
+		OrderUnitPrice    Column `json:"発注単価"`
+		OrderCost         Column `json:"発注金額"`
+		ProgressLevel     Column `json:"進捗レベル"`
+		Process           Column `json:"工程名"`
+		Vendor            Column `json:"仕入先略称"`
+		OrderNo           Column `json:"オーダーNo"`
+		DeliveryPlace     Column `json:"納入場所名"`
+		Misc              Column `json:"部品備考"`
+		CostCode          Column `json:"原価費目ｺｰﾄﾞ"`
+		CostName          Column `json:"原価費目名"`
 	}
-	for _, v := range view.Slice() {
-		stringSlice = append(stringSlice, toString(v))
-	}
-	return
-}
-
-// ToRegex : スペース区切りを正規表現.*で埋める
-// (?i) for ignore case
-// .* for any string
-func ToRegex(s string) string {
-	s = strings.ReplaceAll(s, "　", " ")       // 全角半角変換
-	s = strings.ReplaceAll(s, "\t", " ")      // タブ文字削除
-	s = strings.TrimSpace(s)                  // 左右の空白削除
-	s = strings.Join(strings.Fields(s), `.*`) // スペースを.*に変換
-	return fmt.Sprintf(`(?i).*%s.*`, s)
-}
+)
 
 // ToObject : QFrame をJSONオブジェクトへ変換
 func ToObject(qf qframe.QFrame) (obj Object) {
@@ -500,60 +482,40 @@ func (table Table) T() Table {
 	return result
 }
 
-// Aliases : 列選択チェックボックスラベル
-var Aliases = []string{
-	"受注No",
-	"製番",
-	"製番_品名",
-	"要求番号",
-	"品番",
-	"品名",
-	"形式寸法",
-	"単位",
-	"仕入原価数量",
-	"仕入原価単価",
-	"仕入原価金額",
-	"在庫払出数量",
-	"在庫払出単価",
-	"在庫払出金額",
-	"登録日",
-	"発注日",
-	"納期",
-	"回答納期",
-	"納入日",
-	"発注区分",
-	"メーカ",
-	"材質",
-	"員数",
-	"必要数",
-	"部品発注数",
-	"発注残数",
-	"発注単価",
-	"発注金額",
-	"進捗レベル",
-	"工程名",
-	"仕入先",
-	"オーダーNo",
-	"納入場所名",
-	"部品備考",
-	"原価費目ｺｰﾄﾞ",
-	"原価費目名",
+func toString(ptr *string) string {
+	if (ptr == nil) || reflect.ValueOf(ptr).IsNil() {
+		return ""
+	}
+	return *ptr
 }
+
+func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
+	view, err := qf.StringView(colName)
+	if err != nil {
+		log.Printf("No col %s", colName)
+	}
+	for _, v := range view.Slice() {
+		stringSlice = append(stringSlice, toString(v))
+	}
+	return
+}
+
+/*UIラベル*/
 
 type (
 	// Labels : ラベル
+	// 順序保持のためにmapではなくあえてslice of structを使っている
 	Labels []Label
 	// Label : ラベル
+	// Alias(表示名), Name(SQLデータのカラム名)の組み合わせ
 	Label struct{ Alias, Name string }
 )
 
-func LabelMaker(aliases []string) Labels {
-	var (
-		name   = ConvertHeader(aliases)
-		labels = make(Labels, len(aliases))
-	)
-	for i, l := range aliases {
-		labels[i] = Label{l, name[i]}
+// LabelMaker : Labelsを与えられた表示名sliceから作る
+func LabelMaker(names []string) Labels {
+	labels := make(Labels, len(names))
+	for i, l := range FieldNameToAlias(names) {
+		labels[i] = Label{Alias: l, Name: names[i]}
 	}
 	return labels
 }
