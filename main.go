@@ -106,11 +106,10 @@ func main() {
 		if debug {
 			log.Println(table)
 		}
-		header := FieldNameToAlias(allData.ColumnNames())
 		c.HTML(http.StatusOK, "noui.tmpl", gin.H{
 			"msg":    fmt.Sprintf("テストページ / トップから%d件を表示", len(table)),
 			"table":  table,
-			"header": header,
+			"header": FieldNameToAlias(allData.ColumnNames()),
 		})
 	})
 
