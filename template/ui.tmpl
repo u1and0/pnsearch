@@ -86,9 +86,9 @@
       <!-- 表示設定 -->
       {{$querySelect := .query.Select}}
       {{ range $i, $label := .labels }}
-        <input type="checkbox" name="select" id="select-{{$label.Name}}" value="{{$label.Name}}"
+        <input type="checkbox" name="select" id="select-{{$label.Name}}" value="{{$label.Alias}}"
         {{range $querySelect}}
-          {{if eq $label.Name .}}checked{{end}}
+          {{if eq $label.Alias .}}checked{{end}}
         {{end}}
         >
         <label for="select-{{$label.Name}}">{{$i}}: {{$label.Alias}}</label>

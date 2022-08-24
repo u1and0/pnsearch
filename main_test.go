@@ -58,10 +58,21 @@ func TestToRagex(t *testing.T) {
 	}
 }
 
-func TestConvertHeader(t *testing.T) {
+func TestFieldNameToAlias(t *testing.T) {
 	testSlice := []string{"品名", "ユニットNo"}
 	expect := []string{"品名", "要求番号"}
-	actual := ConvertHeader(testSlice)
+	actual := FieldNameToAlias(testSlice)
+	for i, e := range expect {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v\n", actual, expect)
+		}
+	}
+}
+
+func TestAliasToFieldName(t *testing.T) {
+	testSlice := []string{"品名", "要求番号"}
+	expect := []string{"品名", "ユニットNo"}
+	actual := AliasToFieldName(testSlice)
 	for i, e := range expect {
 		if actual[i] != e {
 			t.Fatalf("got: %v want: %v\n", actual, expect)

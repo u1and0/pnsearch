@@ -18,6 +18,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tobgu/qframe"
 	qsql "github.com/tobgu/qframe/config/sql"
+	"github.com/vishalkuo/bimap"
 )
 
 const (
@@ -177,8 +178,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		}
 	}
 	if len(q.Select) != 0 {
-		// Alias to Name
-		cols := FieldNameToAlias(q.Select)
+		cols := AliasToFieldName(q.Select)
 		qf = qf.Select(cols...)
 	}
 	if debug {
@@ -321,19 +321,43 @@ func ToRegex(s string) string {
 	return fmt.Sprintf(`(?i).*%s.*`, s)
 }
 
+/*UIラベル, フィールド名変換API関連*/
+
+var (
+	spellMap = bimap.NewBiMapFromMap(
+		map[string]string{
+			// フィールド名: 表示名
+			"製番_品名":  "製番名称",
+			"ユニットNo": "要求番号",
+			"員数":     "数量",
+			"形式寸法":   "型式",
+			"材質":     "装置名",
+		})
+)
+
+type (
+	// Labels : ラベル
+	// 順序保持のためにmapではなくあえてslice of structを使っている
+	Labels []Label
+	// Label : ラベル
+	// Alias(表示名), Name(SQLデータのカラム名)の組み合わせ
+	Label struct{ Alias, Name string }
+)
+
+// LabelMaker : Labelsを与えられた表示名sliceから作る
+func LabelMaker(names []string) Labels {
+	labels := make(Labels, len(names))
+	for i, l := range FieldNameToAlias(names) {
+		labels[i] = Label{Alias: l, Name: names[i]}
+	}
+	return labels
+}
+
 // FieldNameToAlias : SQLデータベースカラム名(データ名)をHTMLテーブルヘッダー名(表示名)へ変換する
 func FieldNameToAlias(bfr []string) []string {
-	spellMap := map[string]string{
-		// フィールド名: 表示名
-		"製番_品名":  "製番名称",
-		"ユニットNo": "要求番号",
-		"員数":     "数量",
-		"形式寸法":   "型式",
-		"材質":     "装置名",
-	}
 	var aft = make([]string, len(bfr))
 	for i, k := range bfr {
-		if v, ok := spellMap[k]; ok {
+		if v, ok := spellMap.Get(k); ok {
 			aft[i] = v
 		} else {
 			aft[i] = k
@@ -342,7 +366,21 @@ func FieldNameToAlias(bfr []string) []string {
 	return aft
 }
 
+// AliasToFieldName : HTMLテーブルヘッダー名(表示名)をSQLデータベースカラム名(データ名)へ変換する
+func AliasToFieldName(bfr []string) []string {
+	var aft = make([]string, len(bfr))
+	for i, v := range bfr {
+		if k, ok := spellMap.GetInverse(v); ok {
+			aft[i] = k
+		} else {
+			aft[i] = v
+		}
+	}
+	return aft
+}
+
 /*Table, JSONオブジェクトAPI関連*/
+
 type (
 	// Table : HTMLへ書き込むための行指向の構造体
 	Table []Column
@@ -498,24 +536,4 @@ func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
 		stringSlice = append(stringSlice, toString(v))
 	}
 	return
-}
-
-/*UIラベル*/
-
-type (
-	// Labels : ラベル
-	// 順序保持のためにmapではなくあえてslice of structを使っている
-	Labels []Label
-	// Label : ラベル
-	// Alias(表示名), Name(SQLデータのカラム名)の組み合わせ
-	Label struct{ Alias, Name string }
-)
-
-// LabelMaker : Labelsを与えられた表示名sliceから作る
-func LabelMaker(names []string) Labels {
-	labels := make(Labels, len(names))
-	for i, l := range FieldNameToAlias(names) {
-		labels[i] = Label{Alias: l, Name: names[i]}
-	}
-	return labels
 }
