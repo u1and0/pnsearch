@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -176,6 +177,19 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			log.Println("Sorted QFrame\n", qf)
 		}
 	}
+
+	var (
+		jsonObj []Object
+		err     error
+	)
+	if templateName == "" {
+		jsonObj, err = ToTable(qf).ToObject()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+			return
+		}
+	}
+
 	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示。
 	if len(q.Select) != 0 {
 		cols := AliasToFieldName(q.Select)
@@ -197,7 +211,6 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		})
 	} else { // return JSON
 		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
-		jsonObj := table.ToObject()
 		c.IndentedJSON(http.StatusOK, gin.H{
 			"msg":    msg,
 			"query":  q,
@@ -475,8 +488,12 @@ type (
 )
 
 // ToObject : QFrame をJSONオブジェクトへ変換
-func (table Table) ToObject() []Object {
+func (table Table) ToObject() ([]Object, error) {
 	o := make([]Object, len(table))
+	fl := len(table.T())
+	if fl != 36 {
+		return o, errors.New(fmt.Sprintf("error: length mismatch %d, must 36", fl))
+	}
 	for i, r := range table {
 		o[i].ReceivedOrderNo = r[受注No]
 		o[i].ProductNo = r[製番]
@@ -515,7 +532,7 @@ func (table Table) ToObject() []Object {
 		o[i].CostCode = r[原価費目ｺｰﾄﾞ]
 		o[i].CostName = r[原価費目名]
 	}
-	return o
+	return o, nil
 }
 
 // ToTable : QFrame をTableへ変換
