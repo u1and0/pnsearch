@@ -34,15 +34,17 @@
 	...¥PNsearch¥data¥sqlite3.db
 
 実行ファイルの使い方
+```
 $ pnsearch.exe -h
-Usage of ../../pnsearch:
+Usage of pnsearch:
   -debug
-        Run debug mode
+    	Run debug mode
   -f string
-        SQL database file path (default "./data/sqlite3.db")
+    	SQL database file path (default "./data/sqlite3.db")
   -p int
-        Access port (default 9000)
-  -v    Show version
+    	Access port (default 9000)
+  -v	Show version
+```
 
 
 ## 開発者向けの説明
@@ -57,11 +59,16 @@ HTMLテンプレート: 表示を変えられます。
 gccライブラリが必要です。
 
 ```bash
+# Alpine Linux
+$ apk update && apk add build-base
+# Debian/Ubuntu
+$ apt-get update && apt-get install build-essential
+# Archlinux
 $ pacman -Syu mingw-w64-gcc mingw-w64-binutils gcc-multilib
 ```
 
 #### Linux
-`go build`
+`$ go build -a -ldflags '-linkmode external -extldflags "-static"'`
 
 #### Windows
 `GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -o pnsearch.exe`

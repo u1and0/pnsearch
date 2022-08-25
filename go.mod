@@ -6,6 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/mattn/go-sqlite3 v1.14.14
 	github.com/tobgu/qframe v0.3.6
+	github.com/vishalkuo/bimap v0.0.0-20220726225509-e0b4f20de28b
 )
 
 require (
