@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"embed"
-	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -178,18 +178,6 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		}
 	}
 
-	var (
-		jsonObj []Object
-		err     error
-	)
-	if templateName == "" {
-		jsonObj, err = ToTable(qf).ToObject()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
-			return
-		}
-	}
-
 	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示。
 	if len(q.Select) != 0 {
 		cols := AliasToFieldName(q.Select)
@@ -210,13 +198,20 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			"labels":   LabelMaker(allData.ColumnNames()),
 		})
 	} else { // return JSON
-		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
-		c.IndentedJSON(http.StatusOK, gin.H{
-			"msg":    msg,
-			"query":  q,
-			"length": l,
-			"table":  jsonObj,
-		})
+		var jsonObj bytes.Buffer
+		err := qf.ToJSON(&jsonObj)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+			return
+		}
+		// msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
+		c.IndentedJSON(http.StatusOK, jsonObj.String())
+		// c.IndentedJSON(http.StatusOK, gin.H{
+		// 	"msg":    msg,
+		// 	"query":  q,
+		// 	"length": l,
+		// 	"table":  jsonObj.String(),
+		// })
 	}
 }
 
@@ -394,51 +389,51 @@ func AliasToFieldName(bfr []string) []string {
 
 /*Table, JSONオブジェクトAPI関連*/
 
-const (
-	/* テーブル情報
-	検索、ソートのことは考えず
-	表示とコーディングしやすさのことを考慮して、
-	すべてTEXT型に変更した。
-					CREATE TABLE order2 (
-					"index" INTEGER,*/
-	受注No     = iota // "受注No" TEXT,
-	製番              // "製番" TEXT,
-	製番名称            // "製番_品名" TEXT,
-	要求番号            // "ユニットNo" TEXT,
-	品番              // "品番" TEXT,
-	品名              // "品名" TEXT,
-	型式              // "形式寸法" TEXT,
-	単位              // "単位" TEXT,
-	仕入原価数量          // "仕入原価数量" TEXT,
-	仕入原価単価          // "仕入原価単価" TEXT,
-	仕入原価金額          // "仕入原価金額" TEXT,
-	在庫払出数量          // "在庫払出数量" TEXT,
-	在庫払出単価          // "在庫払出単価" TEXT,
-	在庫払出金額          // "在庫払出金額" TEXT,
-	登録日             // "登録日" TEXT,
-	発注日             // "発注日" TEXT,
-	納期              // "納期" TEXT,
-	回答納期            // "回答納期" TEXT,
-	納入日             // "納入日" TEXT,
-	発注区分            // "発注区分" TEXT,
-	メーカ             // "メーカ" TEXT,
-	材質              // "材質" TEXT,
-	数量              // "員数" TEXT,
-	必要数             // "必要数" TEXT,
-	部品発注数           // "部品発注数" TEXT,
-	発注残数            // "発注残数" TEXT,
-	発注単価            // "発注単価" TEXT,
-	発注金額            // "発注金額" TEXT,
-	進捗レベル           // "進捗レベル" TEXT,
-	工程名             // "工程名" TEXT,
-	仕入先略称           // "仕入先略称" TEXT,
-	オーダーNo          // "オーダーNo" TEXT,
-	納入場所名           // "納入場所名" TEXT,
-	部品備考            // "部品備考" TEXT,
-	原価費目ｺｰﾄﾞ        // "原価費目ｺｰﾄﾞ" TEXT,
-	原価費目名           // "原価費目名" TEXT
-	/*);*/
-)
+// const (
+// 	/* テーブル情報
+// 	検索、ソートのことは考えず
+// 	表示とコーディングしやすさのことを考慮して、
+// 	すべてTEXT型に変更した。
+// 					CREATE TABLE order2 (
+// 					"index" INTEGER,*/
+// 	受注No     = iota // "受注No" TEXT,
+// 	製番              // "製番" TEXT,
+// 	製番名称            // "製番_品名" TEXT,
+// 	要求番号            // "ユニットNo" TEXT,
+// 	品番              // "品番" TEXT,
+// 	品名              // "品名" TEXT,
+// 	型式              // "形式寸法" TEXT,
+// 	単位              // "単位" TEXT,
+// 	仕入原価数量          // "仕入原価数量" TEXT,
+// 	仕入原価単価          // "仕入原価単価" TEXT,
+// 	仕入原価金額          // "仕入原価金額" TEXT,
+// 	在庫払出数量          // "在庫払出数量" TEXT,
+// 	在庫払出単価          // "在庫払出単価" TEXT,
+// 	在庫払出金額          // "在庫払出金額" TEXT,
+// 	登録日             // "登録日" TEXT,
+// 	発注日             // "発注日" TEXT,
+// 	納期              // "納期" TEXT,
+// 	回答納期            // "回答納期" TEXT,
+// 	納入日             // "納入日" TEXT,
+// 	発注区分            // "発注区分" TEXT,
+// 	メーカ             // "メーカ" TEXT,
+// 	材質              // "材質" TEXT,
+// 	数量              // "員数" TEXT,
+// 	必要数             // "必要数" TEXT,
+// 	部品発注数           // "部品発注数" TEXT,
+// 	発注残数            // "発注残数" TEXT,
+// 	発注単価            // "発注単価" TEXT,
+// 	発注金額            // "発注金額" TEXT,
+// 	進捗レベル           // "進捗レベル" TEXT,
+// 	工程名             // "工程名" TEXT,
+// 	仕入先略称           // "仕入先略称" TEXT,
+// 	オーダーNo          // "オーダーNo" TEXT,
+// 	納入場所名           // "納入場所名" TEXT,
+// 	部品備考            // "部品備考" TEXT,
+// 	原価費目ｺｰﾄﾞ        // "原価費目ｺｰﾄﾞ" TEXT,
+// 	原価費目名           // "原価費目名" TEXT
+// 	/*);*/
+// )
 
 type (
 	// Table : HTMLへ書き込むための行指向の構造体
@@ -446,94 +441,94 @@ type (
 	// Column : toSlice()で変換されるqfの列
 	Column []string
 
-	// Object : JSONオブジェクト返すための列試行の構造体
-	Object struct {
-		ReceivedOrderNo   string `json:"受注No"`
-		ProductNo         string `json:"製番"`
-		ProductNoName     string `json:"製番名称"`
-		UnitNo            string `json:"要求番号"`
-		Pid               string `json:"品番"`
-		Name              string `json:"品名"`
-		Type              string `json:"型式"`
-		Unit              string `json:"単位"`
-		PurchaseQuantity  string `json:"仕入原価数量"`
-		PurchaseUnitPrice string `json:"仕入原価単価"`
-		PurchaseCost      string `json:"仕入原価金額"`
-		StockQuantity     string `json:"在庫払出数量"`
-		StockUnitPrice    string `json:"在庫払出単価"`
-		StockCost         string `json:"在庫払出金額"`
-		RecordDate        string `json:"登録日"`
-		OrderDate         string `json:"発注日"`
-		DeliveryDate      string `json:"納期"`
-		ReplyDeliveryDate string `json:"回答納期"`
-		RealDeliveryDate  string `json:"納入日"`
-		OrderDivision     string `json:"発注区分"`
-		Maker             string `json:"メーカ"`
-		Material          string `json:"材質"`
-		Quantity          string `json:"数量"`
-		OrderQuantity     string `json:"必要数"`
-		OrderNum          string `json:"部品部品発注数"`
-		OrderRest         string `json:"発注残数"`
-		OrderUnitPrice    string `json:"発注単価"`
-		OrderCost         string `json:"発注金額"`
-		ProgressLevel     string `json:"進捗レベル"`
-		Process           string `json:"工程名"`
-		Vendor            string `json:"仕入先略称"`
-		OrderNo           string `json:"オーダーNo"`
-		DeliveryPlace     string `json:"納入場所名"`
-		Misc              string `json:"部品備考"`
-		CostCode          string `json:"原価費目ｺｰﾄﾞ"`
-		CostName          string `json:"原価費目名"`
-	}
+	// // Object : JSONオブジェクト返すための列試行の構造体
+	// Object struct {
+	// 	ReceivedOrderNo   string `json:"受注No"`
+	// 	ProductNo         string `json:"製番"`
+	// 	ProductNoName     string `json:"製番名称"`
+	// 	UnitNo            string `json:"要求番号"`
+	// 	Pid               string `json:"品番"`
+	// 	Name              string `json:"品名"`
+	// 	Type              string `json:"型式"`
+	// 	Unit              string `json:"単位"`
+	// 	PurchaseQuantity  string `json:"仕入原価数量"`
+	// 	PurchaseUnitPrice string `json:"仕入原価単価"`
+	// 	PurchaseCost      string `json:"仕入原価金額"`
+	// 	StockQuantity     string `json:"在庫払出数量"`
+	// 	StockUnitPrice    string `json:"在庫払出単価"`
+	// 	StockCost         string `json:"在庫払出金額"`
+	// 	RecordDate        string `json:"登録日"`
+	// 	OrderDate         string `json:"発注日"`
+	// 	DeliveryDate      string `json:"納期"`
+	// 	ReplyDeliveryDate string `json:"回答納期"`
+	// 	RealDeliveryDate  string `json:"納入日"`
+	// 	OrderDivision     string `json:"発注区分"`
+	// 	Maker             string `json:"メーカ"`
+	// 	Material          string `json:"材質"`
+	// 	Quantity          string `json:"数量"`
+	// 	OrderQuantity     string `json:"必要数"`
+	// 	OrderNum          string `json:"部品部品発注数"`
+	// 	OrderRest         string `json:"発注残数"`
+	// 	OrderUnitPrice    string `json:"発注単価"`
+	// 	OrderCost         string `json:"発注金額"`
+	// 	ProgressLevel     string `json:"進捗レベル"`
+	// 	Process           string `json:"工程名"`
+	// 	Vendor            string `json:"仕入先略称"`
+	// 	OrderNo           string `json:"オーダーNo"`
+	// 	DeliveryPlace     string `json:"納入場所名"`
+	// 	Misc              string `json:"部品備考"`
+	// 	CostCode          string `json:"原価費目ｺｰﾄﾞ"`
+	// 	CostName          string `json:"原価費目名"`
+	// }
 )
 
-// ToObject : QFrame をJSONオブジェクトへ変換
-func (table Table) ToObject() ([]Object, error) {
-	o := make([]Object, len(table))
-	fl := len(table.T())
-	if fl != 36 {
-		return o, errors.New(fmt.Sprintf("error: length mismatch %d, must 36", fl))
-	}
-	for i, r := range table {
-		o[i].ReceivedOrderNo = r[受注No]
-		o[i].ProductNo = r[製番]
-		o[i].ProductNoName = r[製番名称]
-		o[i].UnitNo = r[要求番号]
-		o[i].Pid = r[品番]
-		o[i].Name = r[品名]
-		o[i].Type = r[型式]
-		o[i].Unit = r[単位]
-		o[i].PurchaseQuantity = r[仕入原価数量]
-		o[i].PurchaseUnitPrice = r[仕入原価単価]
-		o[i].PurchaseCost = r[仕入原価金額]
-		o[i].StockQuantity = r[在庫払出数量]
-		o[i].StockUnitPrice = r[在庫払出単価]
-		o[i].StockCost = r[在庫払出金額]
-		o[i].RecordDate = r[登録日]
-		o[i].OrderDate = r[発注日]
-		o[i].DeliveryDate = r[納期]
-		o[i].ReplyDeliveryDate = r[回答納期]
-		o[i].RealDeliveryDate = r[納入日]
-		o[i].OrderDivision = r[発注区分]
-		o[i].Maker = r[メーカ]
-		o[i].Material = r[材質]
-		o[i].Quantity = r[数量]
-		o[i].OrderQuantity = r[必要数]
-		o[i].OrderNum = r[部品発注数]
-		o[i].OrderRest = r[発注残数]
-		o[i].OrderUnitPrice = r[発注単価]
-		o[i].OrderCost = r[発注金額]
-		o[i].ProgressLevel = r[進捗レベル]
-		o[i].Process = r[工程名]
-		o[i].Vendor = r[仕入先略称]
-		o[i].OrderNo = r[オーダーNo]
-		o[i].DeliveryPlace = r[納入場所名]
-		o[i].Misc = r[部品備考]
-		o[i].CostCode = r[原価費目ｺｰﾄﾞ]
-		o[i].CostName = r[原価費目名]
-	}
-	return o, nil
-}
+// // ToObject : QFrame をJSONオブジェクトへ変換
+// func (table Table) ToObject() ([]Object, error) {
+// 	o := make([]Object, len(table))
+// 	fl := len(table.T())
+// 	if fl != 36 {
+// 		return o, errors.New(fmt.Sprintf("error: length mismatch %d, must 36", fl))
+// 	}
+// 	for i, r := range table {
+// 		o[i].ReceivedOrderNo = r[受注No]
+// 		o[i].ProductNo = r[製番]
+// 		o[i].ProductNoName = r[製番名称]
+// 		o[i].UnitNo = r[要求番号]
+// 		o[i].Pid = r[品番]
+// 		o[i].Name = r[品名]
+// 		o[i].Type = r[型式]
+// 		o[i].Unit = r[単位]
+// 		o[i].PurchaseQuantity = r[仕入原価数量]
+// 		o[i].PurchaseUnitPrice = r[仕入原価単価]
+// 		o[i].PurchaseCost = r[仕入原価金額]
+// 		o[i].StockQuantity = r[在庫払出数量]
+// 		o[i].StockUnitPrice = r[在庫払出単価]
+// 		o[i].StockCost = r[在庫払出金額]
+// 		o[i].RecordDate = r[登録日]
+// 		o[i].OrderDate = r[発注日]
+// 		o[i].DeliveryDate = r[納期]
+// 		o[i].ReplyDeliveryDate = r[回答納期]
+// 		o[i].RealDeliveryDate = r[納入日]
+// 		o[i].OrderDivision = r[発注区分]
+// 		o[i].Maker = r[メーカ]
+// 		o[i].Material = r[材質]
+// 		o[i].Quantity = r[数量]
+// 		o[i].OrderQuantity = r[必要数]
+// 		o[i].OrderNum = r[部品発注数]
+// 		o[i].OrderRest = r[発注残数]
+// 		o[i].OrderUnitPrice = r[発注単価]
+// 		o[i].OrderCost = r[発注金額]
+// 		o[i].ProgressLevel = r[進捗レベル]
+// 		o[i].Process = r[工程名]
+// 		o[i].Vendor = r[仕入先略称]
+// 		o[i].OrderNo = r[オーダーNo]
+// 		o[i].DeliveryPlace = r[納入場所名]
+// 		o[i].Misc = r[部品備考]
+// 		o[i].CostCode = r[原価費目ｺｰﾄﾞ]
+// 		o[i].CostName = r[原価費目名]
+// 	}
+// 	return o, nil
+// }
 
 // ToTable : QFrame をTableへ変換
 func ToTable(qf qframe.QFrame) Table {
