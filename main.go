@@ -23,7 +23,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.1"
+	VERSION = "v0.3.1r"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -45,9 +45,10 @@ var (
 	/*コマンドフラグ*/
 	showVersion bool
 	debug       bool
-	allData     qframe.QFrame
 	portnum     int
 	filename    string
+	// allData : SQLQの実行でメモリ内に読み込んだ全データ
+	allData qframe.QFrame
 	/*template以下の全てのファイルをバイナリへ取り込み*/
 	//go:embed template/*
 	f embed.FS
@@ -169,13 +170,13 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 
 	// Search Success
-	// Default descending order
-	if q.SortOrder != "" {
+	if q.SortOrder != "" { // Default descending order
 		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
 		if debug {
 			log.Println("Sorted QFrame\n", qf)
 		}
 	}
+	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示。
 	if len(q.Select) != 0 {
 		cols := AliasToFieldName(q.Select)
 		qf = qf.Select(cols...)
