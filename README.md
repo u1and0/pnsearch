@@ -1,5 +1,7 @@
 発注履歴データ検索ツール
 
+See [Github - u1and0/pnsearch](https://github.com/u1and0/pnsearch)
+
 
 # ユーザー向けの説明
 
@@ -67,22 +69,28 @@ $ pacman -Syu mingw-w64-gcc mingw-w64-binutils gcc-multilib
 ```
 
 ### Linux
-下記のような単純なビルドの場合は実行環境にもgccライブラリが必要です。
 
 ```bash
 $ go build
 ```
 
+上記のような単純なビルドの場合は、実行環境にもgccライブラリが必要です。
+また、適宜オプションが必要です。
+
+```bash
+$ GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build
+```
+
 ワンバイナリで実行できるようにビルドする場合はオプションが必要です。
 
 ```bash
-$ go build -a -ldflags '-linkmode external -extldflags "-static"'
+$ GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -a -ldflags '-linkmode external -extldflags "-static"'
 ```
 
 ### Windows
 
 ```bash
-GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -o pnsearch.exe
+$ GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -o pnsearch.exe
 ```
 
 ### Docker
@@ -91,7 +99,7 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64
 $ docker pull u1and0/pnsearch
 ```
 
-See [u1and0/pnsearch](https://hub.docker.com/repository/docker/u1and0/pnsearch)
+See [docker hub - u1and0/pnsearch](https://hub.docker.com/repository/docker/u1and0/pnsearch)
 
 ```bash
 $ docker run -t --rm -v /path/to/data:/data -p 9000:9000 u1and0/pnsearch
