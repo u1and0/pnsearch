@@ -24,7 +24,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.2r"
+	VERSION = "v0.3.4"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -91,6 +91,7 @@ func init() {
 	for k, v := range typemap {
 		if v != "string" {
 			allData = allData.Drop(k)
+			log.Printf("info: drop column %s", k)
 		}
 	}
 	log.Println("Loaded frame\n", allData)
@@ -130,7 +131,7 @@ func main() {
 // テンプレート名がない場合はJSONを返す。
 func ReturnTempl(c *gin.Context, templateName string) {
 	var (
-		sortable = []string{
+		s = []string{
 			"登録日",
 			"発注日",
 			"納期",
@@ -142,7 +143,19 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			"型式",
 			"回答納期",
 		}
-		labels = LabelMaker(allData.ColumnNames())
+		o = map[string]string{
+			"全て":  "全て",
+			"未発注": "発注日無し(未発注)",
+			"発注済": "発注日有り(発注済)",
+		}
+		d = map[string]string{
+			"全て":  "全て",
+			"未納入": "納入日 無し(未納入)",
+			"納入済": "納入日 有り(納入済)",
+			// "納期遅延": "納期遅延",  <= どうやるか検討
+		}
+		l     = LabelMaker(allData.ColumnNames())
+		fixes = Fixes{s, o, d, l}
 		// qf : sort, filter, sliceされるallDataの写像Qframe
 		qf qframe.QFrame
 	)
@@ -167,16 +180,18 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		msg := "検索キーワードがありません"
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":      msg,
-				"query":    q,
-				"sortable": sortable,
-				"labels":   labels,
+				"msg":   msg,
+				"query": q,
+				"fixes": fixes,
 			})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
 		return
 	}
+
+	// 発注日、納入日フィルターを追加
+	filters = q.DayFilters(filters)
 
 	// Search keyword by query parameter
 	qf = allData.Filter(qframe.And(filters...))
@@ -189,10 +204,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		msg := "検索結果がありません"
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":      msg,
-				"query":    q,
-				"sortable": sortable,
-				"labels":   labels,
+				"msg":   msg,
+				"query": q,
+				"fixes": fixes,
 			})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
@@ -203,7 +217,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	// Search Success
 	// SQLによる読み込み時に登録日順に並んでいるので、
 	// パフォーマンスのために登録日順にはsortしない
-	if q.SortOrder != "登録日" {
+	if q.SortOrder != "登録日" && !q.SortAsc {
 		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
 		if debug {
 			log.Println("Sorted QFrame\n", qf)
@@ -224,12 +238,11 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		l := qf.Len()
 		table := ToTable(qf)
 		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":      fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
-			"query":    q,
-			"sortable": sortable,
-			"labels":   labels,
-			"header":   FieldNameToAlias(qf.ColumnNames()),
-			"table":    table,
+			"msg":    fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
+			"query":  q,
+			"fixes":  fixes,
+			"header": FieldNameToAlias(qf.ColumnNames()),
+			"table":  table,
 		})
 	} else { // return JSON
 		var jsonObj bytes.Buffer
@@ -359,6 +372,24 @@ func (q *Query) MakeFilters() (filters []qframe.FilterClause) {
 	return
 }
 
+func (q *Query) DayFilters(filters []qframe.FilterClause) []qframe.FilterClause {
+	isNull := func(p *string) bool { return p == nil }
+	notNull := func(p *string) bool { return p != nil }
+	switch q.Filter.Order {
+	case "未発注":
+		filters = append(filters, qframe.Filter{Comparator: isNull, Column: "発注日"})
+	case "発注済":
+		filters = append(filters, qframe.Filter{Comparator: notNull, Column: "発注日"})
+	}
+	switch q.Filter.Delivery {
+	case "未納入":
+		filters = append(filters, qframe.Filter{Comparator: isNull, Column: "納入日"})
+	case "納入済":
+		filters = append(filters, qframe.Filter{Comparator: notNull, Column: "納入日"})
+	}
+	return filters
+}
+
 // ToRegex : スペース区切りを正規表現.*で埋める
 // (?i) for ignore case
 // .* for any string
@@ -379,6 +410,7 @@ func (q *Query) ToRegex(s string) string {
 /*UIラベル, フィールド名変換API関連*/
 
 var (
+	// spellMap : SQLデータのフィールド名と、HTML表示名を相互に取得できるMap
 	spellMap = bimap.NewBiMapFromMap(
 		map[string]string{
 			// フィールド名: 表示名
@@ -387,10 +419,19 @@ var (
 			"員数":     "数量",
 			"形式寸法":   "型式",
 			"材質":     "装置名",
+			"部品発注数":  "発注数",
+			"納入場所名":  "納入場所",
 		})
 )
 
 type (
+	// Fixes : HTML テンプレートへ渡す固定値
+	Fixes struct {
+		Sort     []string
+		Order    map[string]string
+		Delivery map[string]string
+		Labels
+	}
 	// Labels : ラベル
 	// 順序保持のためにmapではなくあえてslice of structを使っている
 	Labels []Label
@@ -447,6 +488,7 @@ type (
 func ToTable(qf qframe.QFrame) Table {
 	l := len(qf.ColumnNames())
 	table := make(Table, l)
+	qf = qf.Slice(0, MAXROW)
 	for i, colName := range qf.ColumnNames() {
 		table[i] = toSlice(qf, colName)
 	}
@@ -456,12 +498,6 @@ func ToTable(qf qframe.QFrame) Table {
 // T : transpose Table
 func (table Table) T() Table {
 	xl := len(table[0])
-	xl = func() int { // table MAX length: MAXROW(1000)
-		if MAXROW < xl {
-			return MAXROW
-		}
-		return xl
-	}()
 	yl := len(table)
 	result := make(Table, xl)
 	for i := range result {
