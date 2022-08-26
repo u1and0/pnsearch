@@ -186,9 +186,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if debug {
 		log.Println("Selected QFrame\n", qf)
 	}
-	l := qf.Len()
-	table := ToTable(qf)
 	if templateName != "" { // return HTML template
+		l := qf.Len()
+		table := ToTable(qf)
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":      fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
 			"query":    q,
@@ -199,8 +199,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		})
 	} else { // return JSON
 		var jsonObj bytes.Buffer
-		err := qf.ToJSON(&jsonObj)
-		if err != nil {
+		if err := qf.ToJSON(&jsonObj); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
 			return
 		}
