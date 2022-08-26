@@ -190,6 +190,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		return
 	}
 
+	// 発注日、納入日フィルターを追加
+	filters = q.DayFilters(filters)
+
 	// Search keyword by query parameter
 	qf = allData.Filter(qframe.And(filters...))
 	if debug {
@@ -366,6 +369,10 @@ func (q *Query) MakeFilters() (filters []qframe.FilterClause) {
 			Column: "仕入先略称",
 		})
 	}
+	return
+}
+
+func (q *Query) DayFilters(filters []qframe.FilterClause) []qframe.FilterClause {
 	isNull := func(p *string) bool { return p == nil }
 	notNull := func(p *string) bool { return p != nil }
 	switch q.Filter.Order {
@@ -380,7 +387,7 @@ func (q *Query) MakeFilters() (filters []qframe.FilterClause) {
 	case "納入済":
 		filters = append(filters, qframe.Filter{Comparator: notNull, Column: "納入日"})
 	}
-	return
+	return filters
 }
 
 // ToRegex : スペース区切りを正規表現.*で埋める
