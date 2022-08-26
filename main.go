@@ -487,6 +487,7 @@ type (
 func ToTable(qf qframe.QFrame) Table {
 	l := len(qf.ColumnNames())
 	table := make(Table, l)
+	qf = qf.Slice(0, MAXROW)
 	for i, colName := range qf.ColumnNames() {
 		table[i] = toSlice(qf, colName)
 	}
@@ -496,12 +497,6 @@ func ToTable(qf qframe.QFrame) Table {
 // T : transpose Table
 func (table Table) T() Table {
 	xl := len(table[0])
-	xl = func() int { // table MAX length: MAXROW(1000)
-		if MAXROW < xl {
-			return MAXROW
-		}
-		return xl
-	}()
 	yl := len(table)
 	result := make(Table, xl)
 	for i := range result {
