@@ -33,7 +33,7 @@ const (
 	SQLQ = `SELECT
 			*
 			FROM order2
-			ORDER BY 発注日
+			ORDER BY 登録日
 			`
 	// LIMIT 1000
 	// WHERE rowid > 800000
@@ -143,6 +143,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			"回答納期",
 		}
 		labels = LabelMaker(allData.ColumnNames())
+		// qf : sort, filter, sliceされるallDataの写像Qframe
+		qf qframe.QFrame
 	)
 	// Extract query
 	q := newQuery()
@@ -157,8 +159,11 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 	log.Printf("query: %#v", q)
 
+	// Make Qframe filters by Query
+	filters := q.MakeFilters()
+
 	// Empty query
-	if reflect.DeepEqual(q, newQuery()) {
+	if len(filters) == 0 {
 		msg := "検索キーワードがありません"
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{
@@ -174,7 +179,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 
 	// Search keyword by query parameter
-	qf := q.search()
+	qf = allData.Filter(qframe.And(filters...))
 	if debug {
 		log.Println("Filtered QFrame\n", qf)
 	}
@@ -196,7 +201,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 
 	// Search Success
-	if q.SortOrder != "" { // Default descending order
+	// SQLによる読み込み時に登録日順に並んでいるので、
+	// パフォーマンスのために登録日順にはsortしない
+	if q.SortOrder != "登録日" {
 		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
 		if debug {
 			log.Println("Sorted QFrame\n", qf)
@@ -211,6 +218,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if debug {
 		log.Println("Selected QFrame\n", qf)
 	}
+
+	// 最終的なデータをHTMLかJSONで表示
 	if templateName != "" { // return HTML template
 		l := qf.Len()
 		table := ToTable(qf)
@@ -283,13 +292,14 @@ func newQuery() *Query {
 	return &q
 }
 
-func (q *Query) search() qframe.QFrame {
-	// 原因不明だがfunctionや配列でregexp.MustCompile()してもうまく検索されないので
-	// スライスで冗長ながら書き下すしかない。
-	filters := []qframe.FilterClause{}
-	// OR 検索にて、クエリが空文字の時
-	// すべての文字列 ".*.*" を検索してしまうのを防ぐため
-	// ifでfiltersにフィルターを追加するか条件節
+// MakeFilters : filter
+// 原因不明だがfunctionや配列でregexp.MustCompile()してもうまく検索されないので
+// スライスで冗長ながら書き下すしかない。
+//
+// OR 検索にて、クエリが空文字の時
+// すべての文字列 ".*.*" を検索してしまうのを防ぐため
+// ifでfiltersにフィルターを追加するか条件節
+func (q *Query) MakeFilters() (filters []qframe.FilterClause) {
 	if q.ProductNo != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
@@ -346,10 +356,7 @@ func (q *Query) search() qframe.QFrame {
 			Column: "仕入先略称",
 		})
 	}
-	if q.OR {
-		return allData.Filter(qframe.Or(filters...))
-	}
-	return allData.Filter(qframe.And(filters...))
+	return
 }
 
 // ToRegex : スペース区切りを正規表現.*で埋める
