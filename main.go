@@ -129,9 +129,23 @@ func main() {
 // ReturnTempl : HTMLテンプレートを返す。
 // テンプレート名がない場合はJSONを返す。
 func ReturnTempl(c *gin.Context, templateName string) {
+	var (
+		sortable = []string{
+			"登録日",
+			"発注日",
+			"納期",
+			"納入日",
+			"製番",
+			"要求番号",
+			"品番",
+			"品名",
+			"型式",
+			"回答納期",
+		}
+		labels = LabelMaker(allData.ColumnNames())
+	)
 	// Extract query
 	q := newQuery()
-	q.SortOrder = "発注日"
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
@@ -147,7 +161,12 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if reflect.DeepEqual(q, newQuery()) {
 		msg := "検索キーワードがありません"
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{
+				"msg":      msg,
+				"query":    q,
+				"sortable": sortable,
+				"labels":   labels,
+			})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
@@ -167,8 +186,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{
 				"msg":      msg,
 				"query":    q,
-				"sortable": []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"},
-				"labels":   LabelMaker(allData.ColumnNames()),
+				"sortable": sortable,
+				"labels":   labels,
 			})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
@@ -198,10 +217,10 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":      fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
 			"query":    q,
+			"sortable": sortable,
+			"labels":   labels,
 			"header":   FieldNameToAlias(qf.ColumnNames()),
 			"table":    table,
-			"sortable": []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"},
-			"labels":   LabelMaker(allData.ColumnNames()),
 		})
 	} else { // return JSON
 		var jsonObj bytes.Buffer
@@ -242,14 +261,25 @@ type (
 )
 
 func newQuery() *Query {
-	// o := Option{
-	// 	SortOrder: "発注日",
-	// }
-	// q := Query{
-	// 	Option: o,
-	// 	// Select: []string{"品番", "品名", "形式寸法"},
-	// }
-	return &Query{}
+	o := Option{SortOrder: "登録日"}
+	f := Filter{"全て", "全て"}
+	s := []string{
+		"発注日",
+		"納入日",
+		"要求番号",
+		"メーカ",
+		"材質",
+		"品名",
+		"型式",
+		"必要数",
+		"発注数",
+		"発注単価",
+		"発注金額",
+		"工程名",
+		"納入場所",
+	}
+	q := Query{Option: o, Filter: f, Select: s}
+	return &q
 }
 
 func (q *Query) search() qframe.QFrame {
