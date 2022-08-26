@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -92,36 +91,6 @@ func TestLabelMaker(t *testing.T) {
 	}
 	for i, e := range expect {
 		if actual[i] != e {
-			t.Fatalf("got: %v want: %v\n", actual, expect)
-		}
-	}
-}
-
-func Test_TableToObject(t *testing.T) {
-	//            0   1    2    3    4    5
-	c1 := Column{"", "AA", "", "", "bb", "cC", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}
-	c2 := Column{"", "1", "", "", "2", "3", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}
-	c3 := Column{"", "zz", "", "", "yy", "x", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}
-	test := Table{c1, c2, c3}
-	o1 := Object{
-		ProductNo: "AA", // 1
-		Pid:       "1",  // 4
-		Name:      "zz", //5
-	}
-	o2 := Object{
-		ProductNo: "bb", // 1
-		Pid:       "2",  // 4
-		Name:      "yy", //5
-	}
-	o3 := Object{
-		ProductNo: "cC", // 1
-		Pid:       "3",  // 4
-		Name:      "x",  //5
-	}
-	expect := []Object{o1, o2, o3}
-	actual := test.ToObject()
-	for i, e := range expect {
-		if reflect.DeepEqual(actual[i], e) {
 			t.Fatalf("got: %v want: %v\n", actual, expect)
 		}
 	}
