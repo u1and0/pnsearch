@@ -1,8 +1,9 @@
-# PN Search
 発注履歴データ検索ツール
 
+See [Github - u1and0/pnsearch](https://github.com/u1and0/pnsearch)
 
-## ユーザー向けの説明
+
+# ユーザー向けの説明
 
 | URL    | 説明 |
 |-----------------------------------------|-------------------------------------|
@@ -24,7 +25,7 @@
 スペースは任意の数の文字列(検索に正規表現を使用)に変換されます。
 
 
-## 運用者向けの説明
+# 運用者向けの説明
 
 下記exeを実行すると自分のPCをサーバーとして使えます。（ポート開放が必要かもしれません。）
 上記例のIPアドレスを自分のものに変えるか、"localhost"に変えてください。
@@ -47,7 +48,7 @@ Usage of pnsearch:
 ```
 
 
-## 開発者向けの説明
+# 開発者向けの説明
 
 ソースコード: main.go
 	...¥PNsearch¥src¥pnsearch¥main.go
@@ -55,7 +56,7 @@ Usage of pnsearch:
 HTMLテンプレート: 表示を変えられます。
 	...¥PNsearch¥template¥table.tmpl
 
-### ビルド, インストール
+## ビルド, インストール
 gccライブラリが必要です。
 
 ```bash
@@ -67,8 +68,39 @@ $ apt-get update && apt-get install build-essential
 $ pacman -Syu mingw-w64-gcc mingw-w64-binutils gcc-multilib
 ```
 
-#### Linux
-`$ go build -a -ldflags '-linkmode external -extldflags "-static"'`
+### Linux
 
-#### Windows
-`GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -o pnsearch.exe`
+```bash
+$ go build
+```
+
+上記のような単純なビルドの場合は、実行環境にもgccライブラリが必要です。
+また、適宜オプションが必要です。
+
+```bash
+$ GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build
+```
+
+ワンバイナリで実行できるようにビルドする場合はオプションが必要です。
+
+```bash
+$ GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -a -ldflags '-linkmode external -extldflags "-static"'
+```
+
+### Windows
+
+```bash
+$ GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CXX=x86_64-w64-mingw32-g++ CC=x86_64-w64-mingw32-gcc go build -o pnsearch.exe
+```
+
+### Docker
+
+```bash
+$ docker pull u1and0/pnsearch
+```
+
+See [docker hub - u1and0/pnsearch](https://hub.docker.com/repository/docker/u1and0/pnsearch)
+
+```bash
+$ docker run -t --rm -v /path/to/data:/data -p 9000:9000 u1and0/pnsearch
+```
