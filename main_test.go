@@ -26,9 +26,10 @@ var _ = func() bool {
 }()
 
 func TestToRagex(t *testing.T) {
+	q := newQuery()
 	s := `ab cd`
 	expect := `(?i).*ab.*cd.*`
-	actual := ToRegex(s)
+	actual := q.ToRegex(s)
 	if expect != actual {
 		t.Fatalf("got: %v want: %v", actual, expect)
 	}
@@ -36,7 +37,7 @@ func TestToRagex(t *testing.T) {
 	// 複数スペース除去
 	s = `    ab             cd    `
 	expect = `(?i).*ab.*cd.*`
-	actual = ToRegex(s)
+	actual = q.ToRegex(s)
 	if expect != actual {
 		t.Fatalf("got: %v want: %v", actual, expect)
 	}
@@ -44,7 +45,7 @@ func TestToRagex(t *testing.T) {
 	// 全角スペース除去
 	s = `　ab　cd　`
 	expect = `(?i).*ab.*cd.*`
-	actual = ToRegex(s)
+	actual = q.ToRegex(s)
 	if expect != actual {
 		t.Fatalf("got: %v want: %v", actual, expect)
 	}
@@ -52,7 +53,17 @@ func TestToRagex(t *testing.T) {
 	// タブ文字除去
 	s = "\tab\tcd\t"
 	expect = `(?i).*ab.*cd.*`
-	actual = ToRegex(s)
+	actual = q.ToRegex(s)
+	if expect != actual {
+		t.Fatalf("got: %v want: %v\n", actual, expect)
+	}
+
+	// OR検索
+	o := Option{OR: true}
+	q = &Query{Option: o}
+	s = `ab cd`
+	expect = `(?i)(ab|cd)`
+	actual = q.ToRegex(s)
 	if expect != actual {
 		t.Fatalf("got: %v want: %v\n", actual, expect)
 	}
