@@ -24,7 +24,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.3r"
+	VERSION = "v0.3.4"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -410,6 +410,7 @@ func (q *Query) ToRegex(s string) string {
 /*UIラベル, フィールド名変換API関連*/
 
 var (
+	// spellMap : SQLデータのフィールド名と、HTML表示名を相互に取得できるMap
 	spellMap = bimap.NewBiMapFromMap(
 		map[string]string{
 			// フィールド名: 表示名
