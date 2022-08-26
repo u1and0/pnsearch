@@ -36,7 +36,7 @@
           <label for="filter-発注">発注</label>
           <select id="filter-発注" name="発注">
             {{$o := .query.Filter.Order}}
-            {{range $val, $name := .orderable}}
+            {{range $val, $name := .fixes.Order}}
               <option value="{{ $val }}" {{if eq $o $val}} selected {{end}} >{{ $name }}</option>
             {{end}}
             <!-- <option value="全て">全て</option> -->
@@ -46,7 +46,7 @@
           <label for="filter-納入">納入</label>
           <select id="filter-納入" name="納入">
             {{$d := .query.Filter.Delivery}}
-            {{range $val, $name := .deliverable}}
+            {{range $val, $name := .fixes.Delivery}}
               <option value="{{ $val }}" {{if eq $d $val}} selected {{end}} >{{ $name }}</option>
             {{end}}
             <!-- <option value="全て">全て</option> -->
@@ -60,7 +60,7 @@
           <label for="orderby">並替</label>
           <select id="orderby" name="orderby">
             {{$s := .query.SortOrder}}
-            {{range .sortable}}
+            {{range .fixes.Sort}}
               <option value={{.}}
               {{if eq $s .}} selected {{end}}
               >{{.}}</option>
@@ -96,7 +96,7 @@
         <input type="button" value="検索条件(ここをクリックすると表示項目選択メニューに切換)" onclick="toggleMenu()" >
       <!-- 表示設定 -->
       {{$querySelect := .query.Select}}
-      {{ range $i, $label := .labels }}
+      {{ range $i, $label := .fixes.Labels }}
         <input type="checkbox" name="select" id="select-{{$label.Name}}" value="{{$label.Alias}}"
         {{range $querySelect}}
           {{if eq $label.Alias .}}checked{{end}}

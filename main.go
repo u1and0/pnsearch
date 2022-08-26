@@ -131,7 +131,7 @@ func main() {
 // テンプレート名がない場合はJSONを返す。
 func ReturnTempl(c *gin.Context, templateName string) {
 	var (
-		sortable = []string{
+		s = []string{
 			"登録日",
 			"発注日",
 			"納期",
@@ -143,18 +143,19 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			"型式",
 			"回答納期",
 		}
-		orderable = map[string]string{
+		o = map[string]string{
 			"全て":  "全て",
 			"未発注": "発注日無し(未発注)",
 			"発注済": "発注日有り(発注済)",
 		}
-		deliverable = map[string]string{
+		d = map[string]string{
 			"全て":  "全て",
 			"未納入": "納入日 無し(未納入)",
 			"納入済": "納入日 有り(納入済)",
 			// "納期遅延": "納期遅延",  <= どうやるか検討
 		}
-		labels = LabelMaker(allData.ColumnNames())
+		l     = LabelMaker(allData.ColumnNames())
+		fixes = Fixes{s, o, d, l}
 		// qf : sort, filter, sliceされるallDataの写像Qframe
 		qf qframe.QFrame
 	)
@@ -179,12 +180,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		msg := "検索キーワードがありません"
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":         msg,
-				"query":       q,
-				"sortable":    sortable,
-				"orderable":   orderable,
-				"deliverable": deliverable,
-				"labels":      labels,
+				"msg":   msg,
+				"query": q,
+				"fixes": fixes,
 			})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
@@ -203,12 +201,9 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		msg := "検索結果がありません"
 		if templateName != "" {
 			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":         msg,
-				"query":       q,
-				"sortable":    sortable,
-				"orderable":   orderable,
-				"deliverable": deliverable,
-				"labels":      labels,
+				"msg":   msg,
+				"query": q,
+				"fixes": fixes,
 			})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
@@ -240,14 +235,11 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		l := qf.Len()
 		table := ToTable(qf)
 		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":         fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
-			"query":       q,
-			"sortable":    sortable,
-			"orderable":   orderable,
-			"deliverable": deliverable,
-			"labels":      labels,
-			"header":      FieldNameToAlias(qf.ColumnNames()),
-			"table":       table,
+			"msg":    fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
+			"query":  q,
+			"fixes":  fixes,
+			"header": FieldNameToAlias(qf.ColumnNames()),
+			"table":  table,
 		})
 	} else { // return JSON
 		var jsonObj bytes.Buffer
@@ -419,10 +411,19 @@ var (
 			"員数":     "数量",
 			"形式寸法":   "型式",
 			"材質":     "装置名",
+			"部品発注数":  "発注数",
+			"納入場所名":  "納入場所",
 		})
 )
 
 type (
+	// Fixes : HTML テンプレートへ渡す固定値
+	Fixes struct {
+		Sort     []string
+		Order    map[string]string
+		Delivery map[string]string
+		Labels
+	}
 	// Labels : ラベル
 	// 順序保持のためにmapではなくあえてslice of structを使っている
 	Labels []Label
