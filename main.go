@@ -24,7 +24,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.2"
+	VERSION = "v0.3.2r"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -117,7 +117,7 @@ func main() {
 
 	s := r.Group("/search")
 	{
-		s.GET("", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
+		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
 		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
 		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
 	}
@@ -131,6 +131,7 @@ func main() {
 func ReturnTempl(c *gin.Context, templateName string) {
 	// Extract query
 	q := newQuery()
+	q.SortOrder = "発注日"
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
@@ -163,7 +164,12 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if qf.Len() == 0 {
 		msg := "検索結果がありません"
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{
+				"msg":      msg,
+				"query":    q,
+				"sortable": []string{"製番", "登録日", "発注日", "納期", "回答納期", "納入日"},
+				"labels":   LabelMaker(allData.ColumnNames()),
+			})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
@@ -220,6 +226,7 @@ type (
 		Maker     string `form:"メーカ"`
 		Vendor    string `form:"仕入先"`
 		Option
+		Filter
 		Select []string `form:"select"`
 	}
 	// Option : ソートオプション、AND検索OR検索切り替え
@@ -228,17 +235,21 @@ type (
 		SortAsc   bool   `form:"asc"`
 		OR        bool   `form:"or"`
 	}
+	Filter struct {
+		Order    string `form:"発注"`
+		Delivery string `form:"納入"`
+	}
 )
 
 func newQuery() *Query {
-	o := Option{
-		SortOrder: "発注日",
-	}
-	q := Query{
-		Option: o,
-		// Select: []string{"品番", "品名", "形式寸法"},
-	}
-	return &q
+	// o := Option{
+	// 	SortOrder: "発注日",
+	// }
+	// q := Query{
+	// 	Option: o,
+	// 	// Select: []string{"品番", "品名", "形式寸法"},
+	// }
+	return &Query{}
 }
 
 func (q *Query) search() qframe.QFrame {
@@ -251,7 +262,7 @@ func (q *Query) search() qframe.QFrame {
 	if q.ProductNo != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
-				return regexp.MustCompile(ToRegex(q.ProductNo)).MatchString(toString(p))
+				return regexp.MustCompile(q.ToRegex(q.ProductNo)).MatchString(toString(p))
 			},
 			Column: "製番",
 		})
@@ -259,7 +270,7 @@ func (q *Query) search() qframe.QFrame {
 	if q.UnitNo != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
-				return regexp.MustCompile(ToRegex(q.UnitNo)).MatchString(toString(p))
+				return regexp.MustCompile(q.ToRegex(q.UnitNo)).MatchString(toString(p))
 			},
 			Column: "ユニットNo",
 		})
@@ -267,7 +278,7 @@ func (q *Query) search() qframe.QFrame {
 	if q.Pid != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
-				return regexp.MustCompile(ToRegex(q.Pid)).MatchString(toString(p))
+				return regexp.MustCompile(q.ToRegex(q.Pid)).MatchString(toString(p))
 			},
 			Column: "品番",
 		})
@@ -275,7 +286,7 @@ func (q *Query) search() qframe.QFrame {
 	if q.Name != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
-				return regexp.MustCompile(ToRegex(q.Name)).MatchString(toString(p))
+				return regexp.MustCompile(q.ToRegex(q.Name)).MatchString(toString(p))
 			},
 			Column: "品名",
 		})
@@ -283,7 +294,7 @@ func (q *Query) search() qframe.QFrame {
 	if q.Type != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
-				return regexp.MustCompile(ToRegex(q.Type)).MatchString(toString(p))
+				return regexp.MustCompile(q.ToRegex(q.Type)).MatchString(toString(p))
 			},
 			Column: "形式寸法",
 		})
@@ -291,7 +302,7 @@ func (q *Query) search() qframe.QFrame {
 	if q.Maker != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
-				return regexp.MustCompile(ToRegex(q.Maker)).MatchString(toString(p))
+				return regexp.MustCompile(q.ToRegex(q.Maker)).MatchString(toString(p))
 			},
 			Column: "メーカ",
 		})
@@ -299,7 +310,7 @@ func (q *Query) search() qframe.QFrame {
 	if q.Vendor != "" {
 		filters = append(filters, qframe.Filter{
 			Comparator: func(p *string) bool {
-				return regexp.MustCompile(ToRegex(q.Vendor)).MatchString(toString(p))
+				return regexp.MustCompile(q.ToRegex(q.Vendor)).MatchString(toString(p))
 			},
 			Column: "仕入先略称",
 		})
@@ -313,12 +324,18 @@ func (q *Query) search() qframe.QFrame {
 // ToRegex : スペース区切りを正規表現.*で埋める
 // (?i) for ignore case
 // .* for any string
-func ToRegex(s string) string {
-	s = strings.ReplaceAll(s, "　", " ")       // 全角半角変換
-	s = strings.ReplaceAll(s, "\t", " ")      // タブ文字削除
-	s = strings.TrimSpace(s)                  // 左右の空白削除
-	s = strings.Join(strings.Fields(s), `.*`) // スペースを.*に変換
-	return fmt.Sprintf(`(?i).*%s.*`, s)
+func (q *Query) ToRegex(s string) string {
+	s = strings.ReplaceAll(s, "　", " ")  // 全角半角変換
+	s = strings.ReplaceAll(s, "\t", " ") // タブ文字削除
+	s = strings.TrimSpace(s)             // 左右の空白削除
+	if q.OR {
+		s = strings.Join(strings.Fields(s), `|`) // スペースを|に変換
+		s = fmt.Sprintf(`(%s)`, s)
+	} else {
+		s = strings.Join(strings.Fields(s), `.*`) // スペースを.*に変換
+		s = fmt.Sprintf(`.*%s.*`, s)
+	}
+	return `(?i)` + s // ignore case (?i)
 }
 
 /*UIラベル, フィールド名変換API関連*/
