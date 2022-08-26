@@ -84,9 +84,10 @@ func TestLabelMaker(t *testing.T) {
 	aliases := []string{"labela", "labelb", "ユニットNo"}
 	actual := LabelMaker(aliases)
 	expect := Labels{
+		//      Alias   Name
 		Label{"labela", "labela"},
 		Label{"labelb", "labelb"},
-		Label{"ユニットNo", "要求番号"},
+		Label{"要求番号", "ユニットNo"},
 	}
 	for i, e := range expect {
 		if actual[i] != e {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"embed"
 	"flag"
@@ -176,6 +177,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			log.Println("Sorted QFrame\n", qf)
 		}
 	}
+
 	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示。
 	if len(q.Select) != 0 {
 		cols := AliasToFieldName(q.Select)
@@ -184,8 +186,8 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if debug {
 		log.Println("Selected QFrame\n", qf)
 	}
-	l := qf.Len()
 	if templateName != "" { // return HTML template
+		l := qf.Len()
 		table := ToTable(qf)
 		c.HTML(http.StatusOK, templateName, gin.H{
 			"msg":      fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
@@ -196,14 +198,12 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			"labels":   LabelMaker(allData.ColumnNames()),
 		})
 	} else { // return JSON
-		msg := fmt.Sprintf("%#v を検索, %d件を表示", q, l)
-		jsonObj := ToObject(qf)
-		c.IndentedJSON(http.StatusOK, gin.H{
-			"msg":    msg,
-			"query":  q,
-			"length": l,
-			"table":  jsonObj,
-		})
+		var jsonObj bytes.Buffer
+		if err := qf.ToJSON(&jsonObj); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+			return
+		}
+		c.String(http.StatusOK, jsonObj.String())
 	}
 }
 
@@ -386,114 +386,14 @@ type (
 	Table []Column
 	// Column : toSlice()で変換されるqfの列
 	Column []string
-
-	/* テーブル情報
-	検索、ソートのことは考えず
-	表示とコーディングしやすさのことを考慮して、
-	すべてTEXT型に変更した。
-		CREATE TABLE order2 (
-		"index" INTEGER,
-		  "受注No" TEXT,
-		  "製番" TEXT,
-		  "製番_品名" TEXT,
-		  "ユニットNo" TEXT,
-		  "品番" TEXT,
-		  "品名" TEXT,
-		  "形式寸法" TEXT,
-		  "単位" TEXT,
-		  "仕入原価数量" TEXT,
-		  "仕入原価単価" TEXT,
-		  "仕入原価金額" TEXT,
-		  "在庫払出数量" TEXT,
-		  "在庫払出単価" TEXT,
-		  "在庫払出金額" TEXT,
-		  "登録日" TEXT,
-		  "発注日" TEXT,
-		  "納期" TEXT,
-		  "回答納期" TEXT,
-		  "納入日" TEXT,
-		  "発注区分" TEXT,
-		  "メーカ" TEXT,
-		  "材質" TEXT,
-		  "員数" TEXT,
-		  "必要数" TEXT,
-		  "部品発注数" TEXT,
-		  "発注残数" TEXT,
-		  "発注単価" TEXT,
-		  "発注金額" TEXT,
-		  "進捗レベル" TEXT,
-		  "工程名" TEXT,
-		  "仕入先略称" TEXT,
-		  "オーダーNo" TEXT,
-		  "納入場所名" TEXT,
-		  "部品備考" TEXT,
-		  "原価費目ｺｰﾄﾞ" TEXT,
-		  "原価費目名" TEXT
-		);
-	*/
-	// Object : JSONオブジェクト返すための列試行の構造体
-	Object struct {
-		ReceivedOrderNo   Column `json:"受注No"`
-		ProductNo         Column `json:"製番"`
-		ProductNoName     Column `json:"製番名称"`
-		UnitNo            Column `json:"要求番号"`
-		Pid               Column `json:"品番"`
-		Name              Column `json:"品名"`
-		Type              Column `json:"型式"`
-		Unit              Column `json:"単位"`
-		PurchaseQuantity  Column `json:"仕入原価数量"`
-		PurchaseUnitPrice Column `json:"仕入原価単価"`
-		PurchaseCost      Column `json:"仕入原価金額"`
-		StockQuantity     Column `json:"在庫払出数量"`
-		StockUnitPrice    Column `json:"在庫払出単価"`
-		StockCost         Column `json:"在庫払出金額"`
-		RecordDate        Column `json:"登録日"`
-		OrderDate         Column `json:"発注日"`
-		DeliveryDate      Column `json:"納期"`
-		ReplyDeliveryDate Column `json:"回答納期"`
-		RealDeliveryDate  Column `json:"納入日"`
-		OrderDivision     Column `json:"発注区分"`
-		Maker             Column `json:"メーカ"`
-		Material          Column `json:"材質"`
-		Quantity          Column `json:"数量"`
-		OrderQuantity     Column `json:"必要数"`
-		OrderNum          Column `json:"部品部品発注数"`
-		OrderRest         Column `json:"発注残数"`
-		OrderUnitPrice    Column `json:"発注単価"`
-		OrderCost         Column `json:"発注金額"`
-		ProgressLevel     Column `json:"進捗レベル"`
-		Process           Column `json:"工程名"`
-		Vendor            Column `json:"仕入先略称"`
-		OrderNo           Column `json:"オーダーNo"`
-		DeliveryPlace     Column `json:"納入場所名"`
-		Misc              Column `json:"部品備考"`
-		CostCode          Column `json:"原価費目ｺｰﾄﾞ"`
-		CostName          Column `json:"原価費目名"`
-	}
 )
 
-// ToObject : QFrame をJSONオブジェクトへ変換
-func ToObject(qf qframe.QFrame) (obj Object) {
-	obj.UnitNo = toSlice(qf, "ユニットNo")
-	obj.Pid = toSlice(qf, "品番")
-	obj.Name = toSlice(qf, "品名")
-	obj.Type = toSlice(qf, "形式寸法")
-	obj.Maker = toSlice(qf, "メーカ")
-	obj.Material = toSlice(qf, "材質")
-	obj.Process = toSlice(qf, "工程名")
-	obj.DeliveryPlace = toSlice(qf, "納入場所名")
-	obj.OrderUnitPrice = toSlice(qf, "発注単価")
-	obj.OrderCost = toSlice(qf, "発注金額")
-	obj.OrderDate = toSlice(qf, "発注日")
-	obj.RealDeliveryDate = toSlice(qf, "納入日")
-	return
-}
-
 // ToTable : QFrame をTableへ変換
-func ToTable(qf qframe.QFrame) (table Table) {
-	for _, colName := range qf.ColumnNames() {
-		column := toSlice(qf, colName)
-		table = append(table, column)
+func ToTable(qf qframe.QFrame) Table {
+	l := len(qf.ColumnNames())
+	table := make(Table, l)
+	for i, colName := range qf.ColumnNames() {
+		table[i] = toSlice(qf, colName)
 	}
 	return table.T()
 }
