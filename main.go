@@ -248,12 +248,13 @@ type (
 		Filter
 		Select []string `form:"select"`
 	}
-	// Option : ソートオプション、AND検索OR検索切り替え
+	// Option : ソート列の選択、昇順/降順、AND検索OR検索切り替え
 	Option struct {
 		SortOrder string `form:"orderby"`
 		SortAsc   bool   `form:"asc"`
 		OR        bool   `form:"or"`
 	}
+	// Filter : 発注日、納入日フィルター
 	Filter struct {
 		Order    string `form:"発注"`
 		Delivery string `form:"納入"`
