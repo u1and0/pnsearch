@@ -40,6 +40,8 @@ const (
 
 	// MAXROW : qfからTableへ変換する最大行数
 	MAXROW = 1000
+	// LIMIT : qfからJSON, CSVへ変換する最大行数
+	LIMIT = 50000
 )
 
 var (
@@ -246,7 +248,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		})
 	} else { // return JSON
 		var jsonObj bytes.Buffer
-		if err := qf.ToJSON(&jsonObj); err != nil {
+		if err := qf.Slice(0, LIMIT).ToJSON(&jsonObj); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
 			return
 		}
