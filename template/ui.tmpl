@@ -22,26 +22,29 @@
         </td>
 
         <td rowspan="4">
-          <label for="形式寸法">形式寸法</label><br>
+          <label for="型式">型式</label><br>
           <label for="メーカ">メーカ</label><br>
           <label for="仕入先">仕入先</label>
         </td>
         <td rowspan="4">
-          <input type="text" name="形式寸法" value="{{ .query.Type }}" size="10"><br>
+          <input type="text" name="型式" value="{{ .query.Type }}" size="10"><br>
           <input type="text" name="メーカ" value="{{ .query.Maker }}" size="10"><br>
           <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
         </td>
 
         <td rowspan="4">
-          <label for="orderby-発注">発注</label>
-          <select id="発注" name="納入">
+          <label for="filter-発注">発注</label>
+          <select id="filter-発注" name="納入">
             <option value="全て">全て</option>
-            <option value="未入力">未入力</option>
+            <option value="未発注">発注日無し(未発注)</option>
+            <option value="発注済">発注日有り(発注済)</option>
           </select><br>
-          <label for="納入">納入</label>
-          <select id="納入" name="納入">
+          <label for="filter-納入">納入</label>
+          <select id="filter-納入" name="納入">
             <option value="全て">全て</option>
-            <option value="納入日 無し(未納入)">納入日 無し(未納入)</option>
+            <option value="未納入">納入日 無し(未納入)</option>
+            <option value="納入済">納入日 有り(納入済)</option>
+            <option value="納期遅延">納期遅延</option>
           </select><br>
         </td>
 
