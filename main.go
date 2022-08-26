@@ -24,7 +24,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.1r"
+	VERSION = "v0.3.2"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -117,7 +117,7 @@ func main() {
 
 	s := r.Group("/search")
 	{
-		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
+		s.GET("", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
 		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
 		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
 	}
