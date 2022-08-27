@@ -24,7 +24,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.4"
+	VERSION = "v0.3.4r"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -477,7 +477,7 @@ func AliasToFieldName(bfr []string) []string {
 	return aft
 }
 
-/*Table, JSONオブジェクトAPI関連*/
+/*Table API関連*/
 
 type (
 	// Table : HTMLへ書き込むための行指向の構造体
@@ -490,7 +490,12 @@ type (
 func ToTable(qf qframe.QFrame) Table {
 	l := len(qf.ColumnNames())
 	table := make(Table, l)
-	qf = qf.Slice(0, MAXROW)
+	// Table化するときの最大行数はMAXROW行
+	m := qf.Len()
+	if m > MAXROW {
+		m = MAXROW
+	}
+	qf = qf.Slice(0, m)
 	for i, colName := range qf.ColumnNames() {
 		table[i] = toSlice(qf, colName)
 	}
