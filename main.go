@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -161,12 +162,13 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		// qf : sort, filter, sliceされるallDataの写像Qframe
 		qf qframe.QFrame
 	)
+
 	// Extract query
 	q := newQuery()
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q), "fixes": fixes})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
@@ -174,65 +176,16 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 	log.Printf("query: %#v", q)
 
-	// Make Qframe filters by Query
-	filters := q.MakeFilters()
-
-	// Empty query
-	if len(filters) == 0 {
-		msg := "検索キーワードがありません"
+	// Filtering, Sort, Select
+	qf, err := q.Search()
+	if err != nil {
+		msg := fmt.Sprintf("%s", err)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":   msg,
-				"query": q,
-				"fixes": fixes,
-			})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q, "fixes": fixes})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
 		return
-	}
-
-	// 発注日、納入日フィルターを追加
-	filters = q.DayFilters(filters)
-
-	// Search keyword by query parameter
-	qf = allData.Filter(qframe.And(filters...))
-	if debug {
-		log.Println("Filtered QFrame\n", qf)
-	}
-
-	// Search Failure
-	if qf.Len() == 0 {
-		msg := "検索結果がありません"
-		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":   msg,
-				"query": q,
-				"fixes": fixes,
-			})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
-		}
-		return
-	}
-
-	// Search Success
-	// SQLによる読み込み時に登録日順に並んでいるので、
-	// パフォーマンスのために登録日順にはsortしない
-	if q.SortOrder != "登録日" && !q.SortAsc {
-		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
-		if debug {
-			log.Println("Sorted QFrame\n", qf)
-		}
-	}
-
-	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示。
-	if len(q.Select) != 0 {
-		cols := AliasToFieldName(q.Select)
-		qf = qf.Select(cols...)
-	}
-	if debug {
-		log.Println("Selected QFrame\n", qf)
 	}
 
 	// 最終的なデータをHTMLかJSONで表示
@@ -248,12 +201,61 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		})
 	} else { // return JSON
 		var jsonObj bytes.Buffer
-		if err := qf.Slice(0, LIMIT).ToJSON(&jsonObj); err != nil {
+		l := qf.Len()
+		if l > LIMIT {
+			l = LIMIT
+		}
+		if err := qf.Slice(0, l).ToJSON(&jsonObj); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
 			return
 		}
 		c.String(http.StatusOK, jsonObj.String())
 	}
+}
+
+// Search : フィルタリング、ソート
+func (q *Query) Search() (qframe.QFrame, error) {
+	// Make Qframe filters by Query
+	fl := q.MakeFilters()
+	if len(fl) == 0 { // Empty query
+		return qframe.QFrame{}, errors.New("検索キーワードがありません")
+	}
+	fl = q.DayFilters(fl) // 発注日、納入日フィルターを追加
+
+	// Search keyword by query parameter
+	qf := allData.Filter(qframe.And(fl...))
+	if debug {
+		log.Println("Filtered QFrame\n", qf)
+	}
+
+	// Search Failure
+	if qf.Len() == 0 {
+		return qf, errors.New("検索結果がありません")
+	}
+	// Search Success
+	// Sort
+	if !qf.Contains(q.SortOrder) {
+		return qf, errors.New("選択した列名がありません")
+	}
+	// SQLによる読み込み時に登録日順に並んでいるので、
+	// パフォーマンスのために登録日順にはsortしない
+	if q.SortOrder != "登録日" && !q.SortAsc {
+		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+		if debug {
+			log.Println("Sorted QFrame\n", qf)
+		}
+	}
+
+	// Select
+	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示(何もしない)。
+	if len(q.Select) != 0 {
+		cols := AliasToFieldName(q.Select)
+		qf = qf.Select(cols...)
+	}
+	if debug {
+		log.Println("Selected QFrame\n", qf)
+	}
+	return qf, nil
 }
 
 /*クエリパラメータ関連*/
