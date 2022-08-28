@@ -125,10 +125,7 @@ func main() {
 		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
 		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
 		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
-		s.GET("/csv", func(c *gin.Context) {
-			c.String(http.StatusOK, "hello world")
-		})
-		// s.GET("/csv", func(c *gin.Context) { ReturnTempl(c, "csv") })
+		s.GET("/csv", func(c *gin.Context) { ReturnTempl(c, "csv") })
 	}
 
 	port := ":" + strconv.Itoa(portnum)
@@ -194,7 +191,28 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 
 	// 最終的なデータをHTMLかJSONで表示
-	if templateName != "" { // return HTML template
+	switch templateName {
+	case "", "csv": // return JSON or CSV
+		var buf bytes.Buffer
+		l := qf.Len()
+		if l > LIMIT { // limit はQueryに含めてユーザーに指定させるべきかもしれない
+			l = LIMIT
+		}
+		if templateName != "csv" {
+			if err := qf.Slice(0, l).ToJSON(&buf); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+				return
+			}
+			c.String(http.StatusOK, buf.String())
+		}
+		if err := qf.Slice(0, l).ToCSV(&buf); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+			return
+		}
+		var buffer bytes.Buffer
+		buffer = bytes.NewBuffer(buf)
+		c.Writer.Write(buffer)
+	default: // return HTML
 		l := qf.Len()
 		table := ToTable(qf)
 		c.HTML(http.StatusOK, templateName, gin.H{
@@ -204,17 +222,6 @@ func ReturnTempl(c *gin.Context, templateName string) {
 			"header": FieldNameToAlias(qf.ColumnNames()),
 			"table":  table,
 		})
-	} else { // return JSON
-		var jsonObj bytes.Buffer
-		l := qf.Len()
-		if l > LIMIT {
-			l = LIMIT
-		}
-		if err := qf.Slice(0, l).ToJSON(&jsonObj); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
-			return
-		}
-		c.String(http.StatusOK, jsonObj.String())
 	}
 }
 
