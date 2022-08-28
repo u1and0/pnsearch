@@ -54,7 +54,7 @@ var (
 	// allData : SQLQの実行でメモリ内に読み込んだ全データ
 	allData qframe.QFrame
 	/*template以下の全てのファイルをバイナリへ取り込み*/
-	//go:embed template/*
+	//go:embed static/* template/*
 	f embed.FS
 )
 
@@ -105,6 +105,7 @@ func main() {
 	r := gin.Default()
 	templ := template.Must(template.New("").ParseFS(f, "template/*.tmpl"))
 	r.SetHTMLTemplate(templ)
+	r.StaticFileFS("favicon.ico", "static/favicon.ico", http.FS(f))
 
 	// API
 	r.GET("/", func(c *gin.Context) {
