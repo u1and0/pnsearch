@@ -125,6 +125,10 @@ func main() {
 		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
 		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
 		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
+		s.GET("/csv", func(c *gin.Context) {
+			c.String(http.StatusOK, "hello world")
+		})
+		// s.GET("/csv", func(c *gin.Context) { ReturnTempl(c, "csv") })
 	}
 
 	port := ":" + strconv.Itoa(portnum)
@@ -178,7 +182,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	log.Printf("query: %#v", q)
 
 	// Filtering, Sort, Select
-	qf, err := q.Search()
+	qf, err := q.Search(&allData)
 	if err != nil {
 		msg := fmt.Sprintf("%s", err)
 		if templateName != "" {
@@ -212,51 +216,6 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		}
 		c.String(http.StatusOK, jsonObj.String())
 	}
-}
-
-// Search : フィルタリング、ソート
-func (q *Query) Search() (qframe.QFrame, error) {
-	// Make Qframe filters by Query
-	fl := q.MakeFilters()
-	if len(fl) == 0 { // Empty query
-		return qframe.QFrame{}, errors.New("検索キーワードがありません")
-	}
-	fl = q.DayFilters(fl) // 発注日、納入日フィルターを追加
-
-	// Search keyword by query parameter
-	qf := allData.Filter(qframe.And(fl...))
-	if debug {
-		log.Println("Filtered QFrame\n", qf)
-	}
-
-	// Search Failure
-	if qf.Len() == 0 {
-		return qf, errors.New("検索結果がありません")
-	}
-	// Search Success
-	// Sort
-	if !qf.Contains(q.SortOrder) {
-		return qf, errors.New("選択した列名がありません")
-	}
-	// SQLによる読み込み時に登録日順に並んでいるので、
-	// パフォーマンスのために登録日順にはsortしない
-	if q.SortOrder != "登録日" && !q.SortAsc {
-		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
-		if debug {
-			log.Println("Sorted QFrame\n", qf)
-		}
-	}
-
-	// Select
-	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示(何もしない)。
-	if len(q.Select) != 0 {
-		cols := AliasToFieldName(q.Select)
-		qf = qf.Select(cols...)
-	}
-	if debug {
-		log.Println("Selected QFrame\n", qf)
-	}
-	return qf, nil
 }
 
 /*クエリパラメータ関連*/
@@ -410,6 +369,51 @@ func (q *Query) ToRegex(s string) string {
 		s = fmt.Sprintf(`.*%s.*`, s)
 	}
 	return `(?i)` + s // ignore case (?i)
+}
+
+// Search : QFrame source  , sorting, selecting by Query
+func (q *Query) Search(src *qframe.QFrame) (qframe.QFrame, error) {
+	// Make QFrame filters by Query
+	fl := q.MakeFilters()
+	if len(fl) == 0 { // Empty query
+		return qframe.QFrame{}, errors.New("検索キーワードがありません")
+	}
+	fl = q.DayFilters(fl) // 発注日、納入日フィルターを追加
+
+	// Search keyword by query parameter
+	qf := src.Filter(qframe.And(fl...))
+	if debug {
+		log.Println("Filtered QFrame\n", qf)
+	}
+
+	// Search Failure
+	if qf.Len() == 0 {
+		return qf, errors.New("検索結果がありません")
+	}
+	// Search Success
+	// Sort
+	if !qf.Contains(q.SortOrder) {
+		return qf, errors.New("選択した列名がありません")
+	}
+	// SQLによる読み込み時に登録日順に並んでいるので、
+	// パフォーマンスのために登録日順にはsortしない
+	if q.SortOrder != "登録日" && !q.SortAsc {
+		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+		if debug {
+			log.Println("Sorted QFrame\n", qf)
+		}
+	}
+
+	// Select
+	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示(何もしない)。
+	if len(q.Select) != 0 {
+		cols := AliasToFieldName(q.Select)
+		qf = qf.Select(cols...)
+	}
+	if debug {
+		log.Println("Selected QFrame\n", qf)
+	}
+	return qf, nil
 }
 
 /*UIラベル, フィールド名変換API関連*/
