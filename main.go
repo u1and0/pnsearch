@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"embed"
+	"encoding/csv"
 	"errors"
 	"flag"
 	"fmt"
@@ -211,7 +212,25 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		if err := qf.Slice(0, lim).ToCSV(&buf); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
 		}
-		c.Writer.Write(buf.Bytes())
+		// c.Writer.Write(buf.Bytes())
+		// c.Stream(func(w io.Writer) bool {
+		// ar := zip.NewWriter(w)
+		// defer ar.Close()
+
+		// writer := csv.NewWriter(&buf)
+		// writer.Flush()
+
+		file, _ := os.Open("./download.csv")
+		defer file.Close()
+		writer := csv.NewWriter(file)
+		file.Write(buf.Bytes())
+		// writer.WriteAll(&buf.Bytes())
+		writer.Flush()
+		c.Writer.Header().Set("Content-Disposition", "attachmnt; filename=download.csv")
+		// io.Copy(file, buf.W)
+		c.File("./download.csv")
+		// return false
+		// })
 	default: // return HTML
 		// Table化するときの最大行数はMAXROW行
 		a := lim
