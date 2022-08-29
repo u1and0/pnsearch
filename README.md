@@ -11,7 +11,7 @@ See [Github - u1and0/pnsearch](https://github.com/u1and0/pnsearch)
 | http://192.168.XXX.XXX:9000/search      | 要求票の友用、テーブルのみの表示 |
 | http://192.168.XXX.XXX:9000/search/ui   | 検索UI付き、テーブル表示。普通のユーザーはこのページだけを使います。 |
 | http://192.168.XXX.XXX:9000/search/json | JSON形式で表示、エクスポートできます。 |
-| http://192.168.XXX.XXX:9000/search/csv  | *未実装* CSV形式表示、エクスポートできます。 |
+| http://192.168.XXX.XXX:9000/search/csv  | CSV形式表示、エクスポートできます。 |
 
 品番にAA を含む行
 	http://192.168.XXX.XXX:9000/search?品番=AA

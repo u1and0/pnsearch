@@ -25,7 +25,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.4r"
+	VERSION = "v0.4.0"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -47,12 +47,11 @@ const (
 
 var (
 	/*コマンドフラグ*/
-	showVersion bool
-	debug       bool
-	portnum     int
-	filename    string
-	// allData : SQLQの実行でメモリ内に読み込んだ全データ
-	allData qframe.QFrame
+	showVersion bool          // Show version flag
+	debug       bool          // Debug flag
+	portnum     int           // Exporsed port number
+	filename    string        // File path of Database
+	allData     qframe.QFrame // allData : SQLQの実行でメモリ内に読み込んだ全データ
 	/*template以下の全てのファイルをバイナリへ取り込み*/
 	//go:embed static/* template/*
 	f embed.FS
@@ -124,8 +123,8 @@ func main() {
 	{
 		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
 		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
-		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
 		s.GET("/csv", func(c *gin.Context) { ReturnTempl(c, "csv") })
+		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
 	}
 
 	port := ":" + strconv.Itoa(portnum)
@@ -213,7 +212,6 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		}
 		c.Writer.Write(buf.Bytes())
 	default: // return HTML
-		// Table化するときの最大行数はMAXROW行
 		a := lim
 		if lim > MAXROW {
 			lim = MAXROW
@@ -276,8 +274,7 @@ func newQuery() *Query {
 		"工程名",
 		"納入場所",
 	}
-	q := Query{Option: o, Filter: f, Select: s}
-	return &q
+	return &Query{Option: o, Filter: f, Select: s}
 }
 
 // MakeFilters : filter
