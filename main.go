@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"embed"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -24,7 +25,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.3.4"
+	VERSION = "v0.4.0"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -40,18 +41,19 @@ const (
 
 	// MAXROW : qfからTableへ変換する最大行数
 	MAXROW = 1000
+	// LIMIT : qfからJSON, CSVへ変換する最大行数
+	LIMIT = 50000
 )
 
 var (
 	/*コマンドフラグ*/
-	showVersion bool
-	debug       bool
-	portnum     int
-	filename    string
-	// allData : SQLQの実行でメモリ内に読み込んだ全データ
-	allData qframe.QFrame
+	showVersion bool          // Show version flag
+	debug       bool          // Debug flag
+	portnum     int           // Exporsed port number
+	filename    string        // File path of Database
+	allData     qframe.QFrame // allData : SQLQの実行でメモリ内に読み込んだ全データ
 	/*template以下の全てのファイルをバイナリへ取り込み*/
-	//go:embed template/*
+	//go:embed static/* template/*
 	f embed.FS
 )
 
@@ -102,6 +104,7 @@ func main() {
 	r := gin.Default()
 	templ := template.Must(template.New("").ParseFS(f, "template/*.tmpl"))
 	r.SetHTMLTemplate(templ)
+	r.StaticFileFS("favicon.ico", "static/favicon.ico", http.FS(f))
 
 	// API
 	r.GET("/", func(c *gin.Context) {
@@ -120,6 +123,7 @@ func main() {
 	{
 		s.GET("/", func(c *gin.Context) { ReturnTempl(c, "noui.tmpl") })
 		s.GET("/ui", func(c *gin.Context) { ReturnTempl(c, "ui.tmpl") })
+		s.GET("/csv", func(c *gin.Context) { ReturnTempl(c, "csv") })
 		s.GET("/json", func(c *gin.Context) { ReturnTempl(c, "") })
 	}
 
@@ -159,12 +163,13 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		// qf : sort, filter, sliceされるallDataの写像Qframe
 		qf qframe.QFrame
 	)
+
 	// Extract query
 	q := newQuery()
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q)})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q), "fixes": fixes})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
@@ -172,85 +177,53 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 	log.Printf("query: %#v", q)
 
-	// Make Qframe filters by Query
-	filters := q.MakeFilters()
-
-	// Empty query
-	if len(filters) == 0 {
-		msg := "検索キーワードがありません"
+	// Filtering, Sort, Select
+	qf, err := q.Search(&allData)
+	if err != nil {
+		msg := fmt.Sprintf("%s", err)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":   msg,
-				"query": q,
-				"fixes": fixes,
-			})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q, "fixes": fixes})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
 		return
 	}
 
-	// 発注日、納入日フィルターを追加
-	filters = q.DayFilters(filters)
-
-	// Search keyword by query parameter
-	qf = allData.Filter(qframe.And(filters...))
-	if debug {
-		log.Println("Filtered QFrame\n", qf)
-	}
-
-	// Search Failure
-	if qf.Len() == 0 {
-		msg := "検索結果がありません"
-		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{
-				"msg":   msg,
-				"query": q,
-				"fixes": fixes,
-			})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
-		}
-		return
-	}
-
-	// Search Success
-	// SQLによる読み込み時に登録日順に並んでいるので、
-	// パフォーマンスのために登録日順にはsortしない
-	if q.SortOrder != "登録日" && !q.SortAsc {
-		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
-		if debug {
-			log.Println("Sorted QFrame\n", qf)
-		}
-	}
-
-	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示。
-	if len(q.Select) != 0 {
-		cols := AliasToFieldName(q.Select)
-		qf = qf.Select(cols...)
-	}
-	if debug {
-		log.Println("Selected QFrame\n", qf)
-	}
-
+	var (
+		buf bytes.Buffer // QFrame data buffer
+		lim = qf.Len()   // limit of length of data struct
+	)
 	// 最終的なデータをHTMLかJSONで表示
-	if templateName != "" { // return HTML template
-		l := qf.Len()
-		table := ToTable(qf)
+	switch templateName {
+	case "": // return JSON
+		if lim > LIMIT { // limit はQueryに含めてユーザーに指定させるべきかもしれない
+			lim = LIMIT
+		}
+		if err := qf.Slice(0, lim).ToJSON(&buf); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+		}
+		c.String(http.StatusOK, buf.String())
+	case "csv": // return CSV
+		if lim > LIMIT { // limit はQueryに含めてユーザーに指定させるべきかもしれない
+			lim = LIMIT
+		}
+		if err := qf.Slice(0, lim).ToCSV(&buf); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+		}
+		c.Writer.Write(buf.Bytes())
+	default: // return HTML
+		a := lim
+		if lim > MAXROW {
+			lim = MAXROW
+		}
+		table := ToTable(qf.Slice(0, lim))
 		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":    fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
+			"msg":    fmt.Sprintf("検索結果: %d件中%d件を表示", a, len(table)),
 			"query":  q,
 			"fixes":  fixes,
 			"header": FieldNameToAlias(qf.ColumnNames()),
 			"table":  table,
 		})
-	} else { // return JSON
-		var jsonObj bytes.Buffer
-		if err := qf.ToJSON(&jsonObj); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
-			return
-		}
-		c.String(http.StatusOK, jsonObj.String())
 	}
 }
 
@@ -301,8 +274,7 @@ func newQuery() *Query {
 		"工程名",
 		"納入場所",
 	}
-	q := Query{Option: o, Filter: f, Select: s}
-	return &q
+	return &Query{Option: o, Filter: f, Select: s}
 }
 
 // MakeFilters : filter
@@ -407,6 +379,51 @@ func (q *Query) ToRegex(s string) string {
 	return `(?i)` + s // ignore case (?i)
 }
 
+// Search : QFrame source  , sorting, selecting by Query
+func (q *Query) Search(src *qframe.QFrame) (qframe.QFrame, error) {
+	// Make QFrame filters by Query
+	fl := q.MakeFilters()
+	if len(fl) == 0 { // Empty query
+		return qframe.QFrame{}, errors.New("検索キーワードがありません")
+	}
+	fl = q.DayFilters(fl) // 発注日、納入日フィルターを追加
+
+	// Search keyword by query parameter
+	qf := src.Filter(qframe.And(fl...))
+	if debug {
+		log.Println("Filtered QFrame\n", qf)
+	}
+
+	// Search Failure
+	if qf.Len() == 0 {
+		return qf, errors.New("検索結果がありません")
+	}
+	// Search Success
+	// Sort
+	if !qf.Contains(q.SortOrder) {
+		return qf, errors.New("選択した列名がありません")
+	}
+	// SQLによる読み込み時に登録日順に並んでいるので、
+	// パフォーマンスのために登録日順にはsortしない
+	if q.SortOrder != "登録日" && !q.SortAsc {
+		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+		if debug {
+			log.Println("Sorted QFrame\n", qf)
+		}
+	}
+
+	// Select
+	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示(何もしない)。
+	if len(q.Select) != 0 {
+		cols := AliasToFieldName(q.Select)
+		qf = qf.Select(cols...)
+	}
+	if debug {
+		log.Println("Selected QFrame\n", qf)
+	}
+	return qf, nil
+}
+
 /*UIラベル, フィールド名変換API関連*/
 
 var (
@@ -475,7 +492,7 @@ func AliasToFieldName(bfr []string) []string {
 	return aft
 }
 
-/*Table, JSONオブジェクトAPI関連*/
+/*Table API関連*/
 
 type (
 	// Table : HTMLへ書き込むための行指向の構造体
@@ -488,7 +505,6 @@ type (
 func ToTable(qf qframe.QFrame) Table {
 	l := len(qf.ColumnNames())
 	table := make(Table, l)
-	qf = qf.Slice(0, MAXROW)
 	for i, colName := range qf.ColumnNames() {
 		table[i] = toSlice(qf, colName)
 	}
