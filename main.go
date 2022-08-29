@@ -169,7 +169,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q), "fixes": fixes})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q, "fixes": fixes})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
@@ -182,8 +182,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if err != nil {
 		msg := fmt.Sprintf("%s", err)
 		if templateName != "" {
-			qs := fmt.Sprintf("%#v", q)
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": qs, "fixes": fixes})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q, "fixes": fixes})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
