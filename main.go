@@ -191,32 +191,36 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	}
 
 	// 最終的なデータをHTMLかJSONで表示
+	var (
+		buf bytes.Buffer
+		lim = qf.Len()
+	)
 	switch templateName {
-	case "", "csv": // return JSON or CSV
-		var buf bytes.Buffer
-		l := qf.Len()
-		if l > LIMIT { // limit はQueryに含めてユーザーに指定させるべきかもしれない
-			l = LIMIT
+	case "": // return JSON
+		if lim > LIMIT { // limit はQueryに含めてユーザーに指定させるべきかもしれない
+			lim = LIMIT
 		}
-		if templateName != "csv" {
-			if err := qf.Slice(0, l).ToJSON(&buf); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
-				return
-			}
-			c.String(http.StatusOK, buf.String())
-		}
-		if err := qf.Slice(0, l).ToCSV(&buf); err != nil {
+		if err := qf.Slice(0, lim).ToJSON(&buf); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
-			return
 		}
-		var buffer bytes.Buffer
-		buffer = bytes.NewBuffer(buf)
-		c.Writer.Write(buffer)
+		c.String(http.StatusOK, buf.String())
+	case "csv": // return CSV
+		if lim > LIMIT { // limit はQueryに含めてユーザーに指定させるべきかもしれない
+			lim = LIMIT
+		}
+		if err := qf.Slice(0, lim).ToCSV(&buf); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"msg": err, "query": q})
+		}
+		c.Writer.Write(buf.Bytes())
 	default: // return HTML
-		l := qf.Len()
-		table := ToTable(qf)
+		// Table化するときの最大行数はMAXROW行
+		a := lim
+		if lim > MAXROW {
+			lim = MAXROW
+		}
+		table := ToTable(qf.Slice(0, lim))
 		c.HTML(http.StatusOK, templateName, gin.H{
-			"msg":    fmt.Sprintf("検索結果: %d件中%d件を表示", l, len(table)),
+			"msg":    fmt.Sprintf("検索結果: %d件中%d件を表示", a, len(table)),
 			"query":  q,
 			"fixes":  fixes,
 			"header": FieldNameToAlias(qf.ColumnNames()),
@@ -504,12 +508,6 @@ type (
 func ToTable(qf qframe.QFrame) Table {
 	l := len(qf.ColumnNames())
 	table := make(Table, l)
-	// Table化するときの最大行数はMAXROW行
-	m := qf.Len()
-	if m > MAXROW {
-		m = MAXROW
-	}
-	qf = qf.Slice(0, m)
 	for i, colName := range qf.ColumnNames() {
 		table[i] = toSlice(qf, colName)
 	}
