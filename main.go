@@ -25,7 +25,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.4.0"
+	VERSION = "v0.4.1"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -169,7 +169,7 @@ func ReturnTempl(c *gin.Context, templateName string) {
 	if err := c.ShouldBind(q); err != nil {
 		msg := fmt.Sprintf("%#v Bad Query", q)
 		if templateName != "" {
-			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": fmt.Sprintf("%#v", q), "fixes": fixes})
+			c.HTML(http.StatusBadRequest, templateName, gin.H{"msg": msg, "query": q, "fixes": fixes})
 		} else {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": msg, "query": q})
 		}
@@ -400,13 +400,14 @@ func (q *Query) Search(src *qframe.QFrame) (qframe.QFrame, error) {
 	}
 	// Search Success
 	// Sort
-	if !qf.Contains(q.SortOrder) {
-		return qf, errors.New("選択した列名がありません")
+	sortcol := AliasToFieldName([]string{q.SortOrder})[0]
+	if !qf.Contains(sortcol) {
+		return qf, fmt.Errorf("ソート用に選択した列名 %s がありません", q.SortOrder)
 	}
 	// SQLによる読み込み時に登録日順に並んでいるので、
 	// パフォーマンスのために登録日順にはsortしない
-	if q.SortOrder != "登録日" && !q.SortAsc {
-		qf = qf.Sort(qframe.Order{Column: q.SortOrder, Reverse: !q.SortAsc})
+	if sortcol != "登録日" && !q.SortAsc {
+		qf = qf.Sort(qframe.Order{Column: sortcol, Reverse: !q.SortAsc})
 		if debug {
 			log.Println("Sorted QFrame\n", qf)
 		}
@@ -416,6 +417,14 @@ func (q *Query) Search(src *qframe.QFrame) (qframe.QFrame, error) {
 	// 列選択Selectだけ表示。 列選択Selectがない場合はすべての列を表示(何もしない)。
 	if len(q.Select) != 0 {
 		cols := AliasToFieldName(q.Select)
+		for _, c := range cols {
+			var errcol []string
+			if !qf.Contains(c) {
+				errcol = append(errcol, c)
+				return qf, fmt.Errorf("表示用に選択した列名 %s がありません",
+					strings.Join(errcol, " "))
+			}
+		}
 		qf = qf.Select(cols...)
 	}
 	if debug {
@@ -428,6 +437,18 @@ func (q *Query) Search(src *qframe.QFrame) (qframe.QFrame, error) {
 
 var (
 	// spellMap : SQLデータのフィールド名と、HTML表示名を相互に取得できるMap
+	// $ sqlite3 data/sqlite3.db '.schema order2'
+	// CREATE TABLE IF NOT EXISTS "order2" (
+	// "index" INTEGER,
+	//   "受注No" TEXT, "製番" TEXT, "製番_品名" TEXT, "ユニットNo" TEXT, "品番" TEXT,
+	//   "品名" TEXT, "形式寸法" TEXT, "単位" TEXT, "仕入原価数量" TEXT, "仕入原価単価" TEXT,
+	//   "仕入原価金額" TEXT, "在庫払出数量" TEXT, "在庫払出単価" TEXT, "在庫払出金額" TEXT, "登録日" TEXT,
+	//   "発注日" TEXT, "納期" TEXT, "回答納期" TEXT, "納入日" TEXT, "発注区分" TEXT,
+	//   "メーカ" TEXT, "材質" TEXT, "員数" TEXT, "必要数" TEXT, "部品発注数" TEXT,
+	//   "発注残数" TEXT, "発注単価" TEXT, "発注金額" TEXT, "進捗レベル" TEXT, "工程名" TEXT,
+	//   "仕入先略称" TEXT, "オーダーNo" TEXT, "納入場所名" TEXT, "部品備考" TEXT, "原価費目ｺｰﾄﾞ" TEXT,
+	//   "原価費目名" TEXT
+	// );
 	spellMap = bimap.NewBiMapFromMap(
 		map[string]string{
 			// フィールド名: 表示名
@@ -438,6 +459,7 @@ var (
 			"材質":     "装置名",
 			"部品発注数":  "発注数",
 			"納入場所名":  "納入場所",
+			"仕入先略称":  "仕入先",
 		})
 )
 
