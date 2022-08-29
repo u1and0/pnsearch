@@ -190,11 +190,11 @@ func ReturnTempl(c *gin.Context, templateName string) {
 		return
 	}
 
-	// 最終的なデータをHTMLかJSONで表示
 	var (
-		buf bytes.Buffer
-		lim = qf.Len()
+		buf bytes.Buffer // QFrame data buffer
+		lim = qf.Len()   // limit of length of data struct
 	)
+	// 最終的なデータをHTMLかJSONで表示
 	switch templateName {
 	case "": // return JSON
 		if lim > LIMIT { // limit はQueryに含めてユーザーに指定させるべきかもしれない
