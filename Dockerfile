@@ -32,4 +32,4 @@ ENTRYPOINT ["/usr/bin/pnsearch"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="Run PN Search Web Server"\
-      version="v0.4.2"
+      version="v0.4.3"
