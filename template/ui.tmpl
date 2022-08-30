@@ -75,7 +75,7 @@
               <option value="false" selected>降順</option>
             {{end}}
           </select><br>
-          <label for="or">複数語句の組み合わせ</label>
+          <label for="or" title="複数の検索キーワードをスペース文字で区切る場合、AND検索するかOR検索するかを選択">複数語句の組み合わせ</label>
           <select id="or" name="or">
             {{if .query.OR}}
               <option value="false">AND検索</option>
@@ -94,7 +94,11 @@
 
     <!-- ここから先は初期で隠し状態 -->
     <div id="hidden-table" style="display:none;clear:both;">
-        <input type="button" value="検索条件(ここをクリックすると表示項目選択メニューに切換)" onclick="toggleMenu()" >
+      <table>
+        <thead>
+          <th colspan="6" onclick="toggleMenu()" >検索条件(ここをクリックすると表示項目選択メニューに切換)<th>
+        </thead>
+      </table>
       <!-- 表示設定 -->
       {{$querySelect := .query.Select}}
       {{ range $i, $label := .fixes.Labels }}
@@ -107,17 +111,38 @@
       {{end}}
 
       <!-- 検索ボタン -->
+      <!-- <input type="button" id="btnChkDefault" value="初期設定" onclick="viewChkChg()"> -->
+      <input type="button" id="btnChkAll" value="全てチェック" onclick="viewChkChg('all')">
+      <input type="button" id="btnChkClear" value="全てクリア" onclick="viewChkChg('clear')">
       <input type="submit" id="submit" value="検索" style="background-color:#168233">
+      <input type="submit" id="submit1" formaction="/search/csv" value="CSVダウンロード" title="最大50000行までCSVファイルへ出力します。" style="background-color:#168233">
     </div>
   </form>
   {{ .msg }}
   {{template "table" .}}
+
   <script type="text/javascript">
+    // 選択メニューを表示、非表示する
     function toggleMenu(){
       const showt = document.getElementById("show-table").style;
       showt.display=(showt.display=='none')?'block':'none';
       const hiddt = document.getElementById("hidden-table").style;
       hiddt.display=(hiddt.display=='none')?'block':'none';
+    }
+    // チェックボックスを選択する
+    function viewChkChg(mode){
+      let checkbox
+      // let checkbox = document.querySelectorAll("input[type=checkbox] #default")
+      if (mode) checkbox = document.querySelectorAll("input[type=checkbox]")
+      if (mode === "all") {
+        checkbox.forEach((e) => {
+          e.checked = true
+        })
+      } else if (mode === "clear"){
+        checkbox.forEach((e) => {
+          e.checked = false
+        })
+      }
     }
   </script>
 </body>
