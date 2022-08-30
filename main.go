@@ -25,7 +25,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.4.2"
+	VERSION = "v0.4.3"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num

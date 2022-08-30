@@ -23,6 +23,7 @@ COPY ./go.mod /work/go.mod
 COPY ./go.sum /work/go.sum
 COPY ./main.go /work/main.go
 COPY ./template /work/template
+COPY ./static /work/static
 RUN go build -a -ldflags '-linkmode external -extldflags "-static"'
 
 FROM alpine:3.16.2
@@ -31,4 +32,4 @@ ENTRYPOINT ["/usr/bin/pnsearch"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="Run PN Search Web Server"\
-      version="v0.3.1"
+      version="v0.4.3"
