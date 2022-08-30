@@ -87,7 +87,8 @@
           </select><br>
           <!-- 検索ボタン -->
           <input type="submit" id="submit" value="検索" style="background-color:#168233">
-          <input type="submit" id="submit1" formaction="/search/csv" value="CSVダウンロード" title="最大50000行までCSVファイルへ出力します。" style="background-color:#168233">
+          <input type="submit" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" style="background-color:#168233">
+          <input type="submit" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" style="background-color:#168233">
         </td>
       <tbody>
     </table>
@@ -96,7 +97,7 @@
     <div id="hidden-table" style="display:none;clear:both;">
       <table>
         <thead>
-          <th colspan="6" onclick="toggleMenu()" >検索条件(ここをクリックすると表示項目選択メニューに切換)<th>
+          <th colspan="6" onclick="toggleMenu()" >検索条件(ここをクリックすると検索条件メニューに切換)<th>
         </thead>
       </table>
       <!-- 表示設定 -->
@@ -115,7 +116,8 @@
       <input type="button" id="btnChkAll" value="全てチェック" onclick="viewChkChg('all')">
       <input type="button" id="btnChkClear" value="全てクリア" onclick="viewChkChg('clear')">
       <input type="submit" id="submit" value="検索" style="background-color:#168233">
-      <input type="submit" id="submit1" formaction="/search/csv" value="CSVダウンロード" title="最大50000行までCSVファイルへ出力します。" style="background-color:#168233">
+      <input type="submit" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" style="background-color:#168233">
+      <input type="submit" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" style="background-color:#168233">
     </div>
   </form>
   {{ .msg }}
