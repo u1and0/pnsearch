@@ -25,7 +25,7 @@ import (
 
 const (
 	// VERSION : version info
-	VERSION = "v0.4.3"
+	VERSION = "v0.4.4"
 	// FILENAME : sqlite3 database file
 	FILENAME = "./data/sqlite3.db"
 	// PORT : default port num
@@ -108,7 +108,7 @@ func main() {
 
 	// API
 	r.GET("/", func(c *gin.Context) {
-		table := ToTable(allData)
+		table := ToTable(allData.Slice(0, MAXROW))
 		if debug {
 			log.Println(table)
 		}
