@@ -7,89 +7,115 @@
       <thead>
         <th colspan="6" onclick="toggleMenu()" > 検索条件(ここをクリックすると表示項目選択メニューに切換) </th>
       </thead>
+
       <tbody>
-        <td rowspan="4">
-          <label for="製番">製番</label><br>
-          <label for="要求番号">要求番号</label><br>
-          <label for="品番">品番</label><br>
-          <label for="品名">品名</label>
-        </td>
-        <td rowspan="4">
-          <input type="text" name="製番" value="{{ .query.ProductNo }}" size="10"><br>
-          <input type="text" name="要求番号" value="{{ .query.UnitNo }}" size="10"><br>
-          <input type="text" name="品番" value="{{ .query.Pid }}" size="10"><br>
-          <input type="text" name="品名" value="{{ .query.Name }}" size="10">
-        </td>
+        <tr>
+          <td> <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text">製番</span>
+            <input type="text" name="製番" class="form-control" value="{{ .query.ProductNo }}" size="10">
+          </div> </td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text">型式</span>
+            <input type="text" name="型式" class="form-control" value="{{ .query.Type }}" size="10">
+          </div> </td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <label class="input-group-text" for="filter-発注">発注</label>
+            <select class="form-select" id="filter-発注" name="発注">
+              {{$o := .query.Filter.Order}}
+              {{range $val, $name := .fixes.Order}}
+                <option value="{{ $val }}" {{if eq $o $val}} selected {{end}} >{{ $name }}</option>
+              {{end}}
+              <!-- <option value="全て">全て</option> -->
+              <!-- <option value="未発注">発注日無し(未発注)</option> -->
+              <!-- <option value="発注済">発注日有り(発注済)</option> -->
+            </select>
+          </div> </td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <label class="input-group-text" for="orderby">並替</label>
+            <select class="form-select" id="orderby" name="orderby">
+              {{$s := .query.SortOrder}}
+              {{range .fixes.Sort}}
+                <option value={{.}}
+                {{if eq $s .}} selected {{end}}
+                >{{.}}</option>
+              {{end}}
+            </select>
+            <select class="form-select" id="asc" name="asc">
+              {{if .query.SortAsc}}
+                <option value="true" selected>昇順</option>
+                <option value="false">降順</option>
+              {{else}}
+                <option value="true">昇順</option>
+                <option value="false" selected>降順</option>
+              {{end}}
+            </select>
+          </div> </td>
+        <tr>
 
-        <td rowspan="4">
-          <label for="型式">型式</label><br>
-          <label for="メーカ">メーカ</label><br>
-          <label for="仕入先">仕入先</label>
-        </td>
-        <td rowspan="4">
-          <input type="text" name="型式" value="{{ .query.Type }}" size="10"><br>
-          <input type="text" name="メーカ" value="{{ .query.Maker }}" size="10"><br>
-          <input type="text" name="仕入先" value="{{ .query.Vendor }}" size="10">
-        </td>
+        <tr>
+          <td> <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text">要求番号</span>
+            <input type="text" name="要求番号" class="form-control" value="{{ .query.UnitNo }}" size="10">
+          </div> </td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text">メーカ</span>
+            <input type="text" name="メーカ" class="form-control" value="{{ .query.Maker }}" size="10">
+          </div> </td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <label class="input-group-text" for="filter-納入">納入</label>
+            <select class="form-select" id="filter-納入" name="納入">
+              {{$d := .query.Filter.Delivery}}
+              {{range $val, $name := .fixes.Delivery}}
+                <option value="{{ $val }}" {{if eq $d $val}} selected {{end}} >{{ $name }}</option>
+              {{end}}
+              <!-- <option value="全て">全て</option> -->
+              <!-- <option value="未納入">納入日 無し(未納入)</option> -->
+              <!-- <option value="納入済">納入日 有り(納入済)</option> -->
+              <!-- <option value="納期遅延">納期遅延</option> -->
+            </select>
+          </div> </td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <label class="input-group-text" for="or" title="複数の検索キーワードをスペース文字で区切る場合、AND検索するかOR検索するかを選択">複数語句の組み合わせ</label>
+            <select class="form-select" id="or" name="or">
+              {{if .query.OR}}
+                <option value="false">AND検索</option>
+                <option value="true" selected>OR検索</option>
+              {{else}}
+                <option value="false" selected>AND検索</option>
+                <option value="true">OR検索</option>
+              {{end}}
+            </select>
+          </div> </td>
+        </tr>
 
-        <td rowspan="4">
-          <label for="filter-発注">発注</label>
-          <select id="filter-発注" name="発注">
-            {{$o := .query.Filter.Order}}
-            {{range $val, $name := .fixes.Order}}
-              <option value="{{ $val }}" {{if eq $o $val}} selected {{end}} >{{ $name }}</option>
+        <tr>
+          <td> <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text">品番</span>
+            <input type="text" name="品番" class="form-control" value="{{ .query.Pid }}" size="10">
+          </div> </td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text">仕入先</span>
+            <input type="text" name="仕入先" class="form-control" value="{{ .query.Vendor }}" size="10">
+          </div> </td>
+          <td></td>
+          <td> <div class="input-group input-group-sm mb-3">
+            <!-- 検索ボタン -->
+            <input type="submit" class="btn btn-outline-success" id="submit" value="検索" >
+            {{if .header}}
+            <input type="submit" class="btn btn-outline-success" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" >
+            <input type="submit" class="btn btn-outline-success" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" >
             {{end}}
-            <!-- <option value="全て">全て</option> -->
-            <!-- <option value="未発注">発注日無し(未発注)</option> -->
-            <!-- <option value="発注済">発注日有り(発注済)</option> -->
-          </select><br>
-          <label for="filter-納入">納入</label>
-          <select id="filter-納入" name="納入">
-            {{$d := .query.Filter.Delivery}}
-            {{range $val, $name := .fixes.Delivery}}
-              <option value="{{ $val }}" {{if eq $d $val}} selected {{end}} >{{ $name }}</option>
-            {{end}}
-            <!-- <option value="全て">全て</option> -->
-            <!-- <option value="未納入">納入日 無し(未納入)</option> -->
-            <!-- <option value="納入済">納入日 有り(納入済)</option> -->
-            <!-- <option value="納期遅延">納期遅延</option> -->
-          </select><br>
-        </td>
+          </div> </td>
+        </tr>
 
-        <td rowspan="4">
-          <label for="orderby">並替</label>
-          <select id="orderby" name="orderby">
-            {{$s := .query.SortOrder}}
-            {{range .fixes.Sort}}
-              <option value={{.}}
-              {{if eq $s .}} selected {{end}}
-              >{{.}}</option>
-            {{end}}
-          </select><span>
-          <select id="asc" name="asc">
-            {{if .query.SortAsc}}
-              <option value="true" selected>昇順</option>
-              <option value="false">降順</option>
-            {{else}}
-              <option value="true">昇順</option>
-              <option value="false" selected>降順</option>
-            {{end}}
-          </select><br>
-          <label for="or" title="複数の検索キーワードをスペース文字で区切る場合、AND検索するかOR検索するかを選択">複数語句の組み合わせ</label>
-          <select id="or" name="or">
-            {{if .query.OR}}
-              <option value="false">AND検索</option>
-              <option value="true" selected>OR検索</option>
-            {{else}}
-              <option value="false" selected>AND検索</option>
-              <option value="true">OR検索</option>
-            {{end}}
-          </select><br>
-          <!-- 検索ボタン -->
-          <input type="submit" id="submit" value="検索" style="background-color:#168233">
-          <input type="submit" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" style="background-color:#168233">
-          <input type="submit" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" style="background-color:#168233">
-        </td>
+
+        <tr>
+          <td> <div class="input-group input-group-sm mb-3">
+            <span class="input-group-text">品名</span>
+            <input type="text" name="品名" class="form-control" value="{{ .query.Name }}" size="10">
+          </div> </td>
+        </tr>
+
       <tbody>
     </table>
 
@@ -100,24 +126,30 @@
           <th colspan="6" onclick="toggleMenu()" >検索条件(ここをクリックすると検索条件メニューに切換)<th>
         </thead>
       </table>
-      <!-- 表示設定 -->
-      {{$querySelect := .query.Select}}
-      {{ range $i, $label := .fixes.Labels }}
-        <input type="checkbox" name="select" id="select-{{$label.Name}}" value="{{$label.Alias}}"
-        {{range $querySelect}}
-          {{if eq $label.Alias .}}checked{{end}}
+      <div class="input-group input-group-sm mb-3">
+        <!-- 表示設定 -->
+        {{$querySelect := .query.Select}}
+        {{ range $i, $label := .fixes.Labels }}
+          <input type="checkbox" class="form-check-input" name="select" id="select-{{$label.Name}}" value="{{$label.Alias}}"
+          {{range $querySelect}}
+            {{if eq $label.Alias .}}checked{{end}}
+          {{end}}
+          >
+          <label for="select-{{$label.Name}}">{{$i}}: {{$label.Alias}}</label>
         {{end}}
-        >
-        <label for="select-{{$label.Name}}">{{$i}}: {{$label.Alias}}</label>
-      {{end}}
+      </div>
 
-      <!-- 検索ボタン -->
-      <!-- <input type="button" id="btnChkDefault" value="初期設定" onclick="viewChkChg()"> -->
-      <input type="button" id="btnChkAll" value="全てチェック" onclick="viewChkChg('all')">
-      <input type="button" id="btnChkClear" value="全てクリア" onclick="viewChkChg('clear')">
-      <input type="submit" id="submit" value="検索" style="background-color:#168233">
-      <input type="submit" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" style="background-color:#168233">
-      <input type="submit" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" style="background-color:#168233">
+      <div class="input-group input-group-sm mb-3">
+        <!-- 検索ボタン -->
+        <!-- <input type="button" id="btnChkDefault" value="初期設定" onclick="viewChkChg()"> -->
+        <input type="button" class="btn btn-outline-dark" id="btnChkAll" value="全てチェック" onclick="viewChkChg('all')">
+        <input type="button" class="btn btn-outline-dark" id="btnChkClear" value="全てクリア" onclick="viewChkChg('clear')">
+        <input type="submit" class="btn btn-outline-success" id="submit" value="検索" >
+        {{if .header}}
+        <input type="submit" class="btn btn-outline-success" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" >
+        <input type="submit" class="btn btn-outline-success" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" >
+        {{end}}
+      </div>
     </div>
   </form>
   {{ .msg }}
