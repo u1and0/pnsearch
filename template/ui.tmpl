@@ -101,8 +101,10 @@
           <td> <div class="input-group input-group-sm mb-3">
             <!-- 検索ボタン -->
             <input type="submit" class="btn btn-outline-success" id="submit" value="検索" >
+            {{if .header}}
             <input type="submit" class="btn btn-outline-success" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" >
             <input type="submit" class="btn btn-outline-success" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" >
+            {{end}}
           </div> </td>
         </tr>
 
@@ -143,8 +145,10 @@
         <input type="button" class="btn btn-outline-dark" id="btnChkAll" value="全てチェック" onclick="viewChkChg('all')">
         <input type="button" class="btn btn-outline-dark" id="btnChkClear" value="全てクリア" onclick="viewChkChg('clear')">
         <input type="submit" class="btn btn-outline-success" id="submit" value="検索" >
+        {{if .header}}
         <input type="submit" class="btn btn-outline-success" id="submit1" formaction="/search/csv" value="CSV" title="最大50000行までCSV形式で出力します。" >
         <input type="submit" class="btn btn-outline-success" id="submit2" formaction="/search/json" value="JSON" title="最大50000行までJSON形式で出力します。" >
+        {{end}}
       </div>
     </div>
   </form>
