@@ -93,7 +93,7 @@ func init() {
 	for k, v := range typemap {
 		if v != "string" {
 			allData = allData.Drop(k)
-			log.Printf("info: drop column %s", k)
+			log.Printf("info: drop column '%s'", k)
 		}
 	}
 	log.Println("Loaded frame\n", allData)
@@ -402,15 +402,11 @@ func (q *Query) Search(src *qframe.QFrame) (qframe.QFrame, error) {
 	// Sort
 	sortcol := AliasToFieldName([]string{q.SortOrder})[0]
 	if !qf.Contains(sortcol) {
-		return qf, fmt.Errorf("ソート用に選択した列名 %s がありません", q.SortOrder)
+		return qf, fmt.Errorf("ソート用に選択した列名 '%s' がありません", q.SortOrder)
 	}
-	// SQLによる読み込み時に登録日順に並んでいるので、
-	// パフォーマンスのために登録日順にはsortしない
-	if sortcol != "登録日" && !q.SortAsc {
-		qf = qf.Sort(qframe.Order{Column: sortcol, Reverse: !q.SortAsc})
-		if debug {
-			log.Println("Sorted QFrame\n", qf)
-		}
+	qf = qf.Sort(qframe.Order{Column: sortcol, Reverse: !q.SortAsc})
+	if debug {
+		log.Println("Sorted QFrame\n", qf)
 	}
 
 	// Select
@@ -421,7 +417,7 @@ func (q *Query) Search(src *qframe.QFrame) (qframe.QFrame, error) {
 			var errcol []string
 			if !qf.Contains(c) {
 				errcol = append(errcol, c)
-				return qf, fmt.Errorf("表示用に選択した列名 %s がありません",
+				return qf, fmt.Errorf("表示用に選択した列名 '%s' がありません",
 					strings.Join(errcol, " "))
 			}
 		}
@@ -559,7 +555,7 @@ func toString(ptr *string) string {
 func toSlice(qf qframe.QFrame, colName string) (stringSlice []string) {
 	view, err := qf.StringView(colName)
 	if err != nil {
-		log.Printf("No col %s", colName)
+		log.Printf("No col '%s'", colName)
 	}
 	for _, v := range view.Slice() {
 		stringSlice = append(stringSlice, toString(v))
