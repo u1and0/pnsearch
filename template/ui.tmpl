@@ -130,12 +130,14 @@
         <!-- 表示設定 -->
         {{$querySelect := .query.Select}}
         {{ range $i, $label := .fixes.Labels }}
-          <input type="checkbox" class="form-check-input" name="select" id="select-{{$label.Name}}" value="{{$label.Alias}}"
-          {{range $querySelect}}
-            {{if eq $label.Alias .}}checked{{end}}
-          {{end}}
-          >
-          <label for="select-{{$label.Name}}">{{$i}}: {{$label.Alias}}</label>
+          <div class="form-check form-check-inline">
+            <input type="checkbox" class="form-check-input" name="select" id="select-{{$label.Name}}" value="{{$label.Alias}}"
+            {{range $querySelect}}
+              {{if eq $label.Alias .}}checked{{end}}
+            {{end}}
+            >
+            <label for="select-{{$label.Name}}">{{$i}}: {{$label.Alias}}&nbsp;</label>
+          </div>
         {{end}}
       </div>
 
